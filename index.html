@@ -3,47 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canalpilot</title>
-    <script>
-        function validateForm() {
-            const start = parseFloat(document.getElementById('start').value);
-            const end = parseFloat(document.getElementById('end').value);
-            const speed = parseFloat(document.getElementById('speed').value);
-            const hours = parseFloat(document.getElementById('hours').value);
-            const maxCorridorLength = 100; // Example: you can adjust this as per your actual maximum corridor length
-
-            if (isNaN(start) || isNaN(end) || isNaN(speed) || isNaN(hours)) {
-                alert('Please enter valid numbers.');
-                return false;
-            }
-            if (speed <= 0 || hours <= 0) {
-                alert('Speed and hours must be greater than 0.');
-                return false;
-            }
-            if (start < 0 || end < 0 || start > maxCorridorLength || end > maxCorridorLength) {
-                alert('Start and end values must be between 0 and the maximum corridor length.');
-                return false;
-            }
-            if (start === end) {
-                alert('Start and end values must be different.');
-                return false;
-            }
-            return true;
+    <title>Chainage Calculator</title>
+    <style>
+        body {
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            font-family: Arial, sans-serif;
+            color: #333;
+            padding: 20px;
         }
-    </script>
+        input {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </head>
 <body>
-    <h1>Canalpilot</h1>
-    <form onsubmit="return validateForm()">
-        <label for="start">Start:</label>
-        <input type="text" id="start" name="start"><br><br>
-        <label for="end">End:</label>
-        <input type="text" id="end" name="end"><br><br>
-        <label for="speed">Speed:</label>
-        <input type="text" id="speed" name="speed"><br><br>
-        <label for="hours">Hours:</label>
-        <input type="text" id="hours" name="hours"><br><br>
-        <input type="submit" value="Submit">
-    </form>
+    <h1>Chainage Calculator</h1>
+    <label for="startChainage">Start Chainage:</label>
+    <input type="number" id="startChainage" placeholder="Enter start chainage">
+
+    <label for="endChainage">End Chainage:</label>
+    <input type="number" id="endChainage" placeholder="Enter end chainage">
+
+    <label for="hours">Hours:</label>
+    <input type="number" id="hours" placeholder="Enter hours">
+
+    <label for="speed">Speed:</label>
+    <input type="number" id="speed" placeholder="Enter speed">
+
+    <button id="calculate">Calculate</button>
+    <button id="reset">Reset</button>
+
+    <script type="module">
+        import { validateInputs } from './validation.js';
+
+        document.getElementById('calculate').addEventListener('click', function() {
+            const start = parseFloat(document.getElementById('startChainage').value);
+            const end = parseFloat(document.getElementById('endChainage').value);
+            const hours = parseFloat(document.getElementById('hours').value);
+            const speed = parseFloat(document.getElementById('speed').value);
+
+            if (validateInputs(start, end, hours, speed)) {
+                // Perform calculation here
+                alert('Calculating...');
+            }
+        });
+
+        document.getElementById('reset').addEventListener('click', function() {
+            document.getElementById('startChainage').value = '';
+            document.getElementById('endChainage').value = '';
+            document.getElementById('hours').value = '';
+            document.getElementById('speed').value = '';
+        });
+    </script>
 </body>
 </html>
