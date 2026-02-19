@@ -1,128 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lookahead Distance Calculator</title>
+    <title>CanalPilot</title>
     <style>
-        body {
-            background: linear-gradient(to right, #74ebd5, #acb6e5);
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            padding: 20px;
-        }
-        .panel {
-            padding: 20px;
-            border: 2px solid #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        .feature {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-        }
-        .badge {
-            padding: 5px 10px;
-            border-radius: 12px;
-            color: white;
-        }
-        .red { background-color: red; }
-        .teal { background-color: teal; }
-        .blue { background-color: blue; }
-        .green { background-color: green; }
-        .lightblue { background-color: lightblue; }
-        .gray { background-color: gray; }
-        .purple { background-color: purple; }
-        .orange { background-color: orange; }
-        .darkred { background-color: darkred; }
-        .darkpurple { background-color: darkpurple; }
-        .pink { background-color: pink; }
-        .cyan { background-color: cyan; }
-        .button {
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .button:hover {
-            opacity: 0.8;
-        }
-        .scroll {
-            max-height: 300px;
-            overflow-y: auto;
-            scrollbar-width: thin;
-        }
-        .scroll::-webkit-scrollbar {
-            width: 8px;
-        }
-        .scroll::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 10px;
-        }
+        body { font-family: Arial; margin: 20px; background: #74ebd5; }
+        .container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        .panel { background: white; padding: 20px; border-radius: 10px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; }
+        button { width: 100%; padding: 10px; margin: 5px 0; background: #007BFF; color: white; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .feature { padding: 10px; margin: 5px 0; background: #f0f0f0; border-radius: 5px; }
     </style>
 </head>
 <body>
+    <h1>🚤 CanalPilot</h1>
     <div class="container">
         <div class="panel">
             <h2>Input</h2>
-            <div class="input-group">
-                <label for="speed">Speed (mph):</label>
-                <input type="number" id="speed">
-            </div>
-            <div class="input-group">
-                <label for="lookahead">Lookahead (hours):</label>
-                <input type="number" id="lookahead">
-            </div>
-            <button class="button" id="calculate">Calculate</button>
-            <button class="button" id="reset">Reset</button>
+            <label>Speed (mph):</label>
+            <input type="number" id="speed" value="3" />
+            <label>Hours:</label>
+            <input type="number" id="hours" value="2" />
+            <button onclick="calculate()">Calculate</button>
         </div>
         <div class="panel">
             <h2>Results</h2>
-            <div id="results" class="scroll"></div>
-            <div id="stats"></div>
+            <div id="output"></div>
         </div>
     </div>
+
     <script src="testCorridor.js"></script>
     <script>
-        document.getElementById('calculate').onclick = function() {
+        function calculate() {
             const speed = parseFloat(document.getElementById('speed').value);
-            const lookahead = parseFloat(document.getElementById('lookahead').value);
-            const lookaheadDistance = speed * lookahead;
-            const filteredFeatures = data.filter(feature => feature.distance <= lookaheadDistance);
-            const resultsContainer = document.getElementById('results');
-            resultsContainer.innerHTML = '';
-            filteredFeatures.sort((a, b) => a.distance - b.distance);
-            filteredFeatures.forEach(feature => {
-                const badgeClass = feature.type.toLowerCase();
-                const featureElement = document.createElement('div');
-                featureElement.className = `feature ${badgeClass}`;
-                featureElement.innerHTML = `<span class='badge ${badgeClass}'>${feature.type}</span> ${feature.name} - ${feature.distance.toFixed(2)} miles - ETA: ${feature.eta.toFixed(2)} hours - Chainage: ${feature.chainage} m - Locks: ${feature.lockCount}`;
-                resultsContainer.appendChild(featureElement);
+            const hours = parseFloat(document.getElementById('hours').value);
+            const distance = speed * hours;
+            
+            const output = document.getElementById('output');
+            output.innerHTML = '<p><strong>Lookahead: ' + distance.toFixed(2) + ' miles</strong></p>';
+            
+            if (typeof testCorridor === 'undefined') {
+                output.innerHTML += '<p style="color: red;">ERROR: testCorridor not loaded!</p>';
+                return;
+            }
+            
+            const features = testCorridor.features.filter(f => f.cumulativeDistance <= distance);
+            
+            output.innerHTML += '<p>Features: ' + features.length + '</p>';
+            
+            features.forEach(f => {
+                const eta = (f.cumulativeDistance / speed).toFixed(2);
+                output.innerHTML += '<div class="feature">' + 
+                    f.name + '<br/>' +
+                    'Distance: ' + f.cumulativeDistance.toFixed(2) + ' mi, ' +
+                    'ETA: ~' + eta + 'h' +
+                    '</div>';
             });
-            const totalFeatures = filteredFeatures.length;
-            const locksAhead = filteredFeatures.filter(f => f.type === 'Lock').length;
-            const bridgesAhead = filteredFeatures.filter(f => f.type === 'Bridge').length;
-            const marinasAhead = filteredFeatures.filter(f => f.type === 'Marina').length;
-            const stats = `Total features ahead: ${totalFeatures}, Locks ahead: ${locksAhead}, Bridges ahead: ${bridgesAhead}, Marinas ahead: ${marinasAhead}`;
-            document.getElementById('stats').innerText = stats;
-        };
-        document.getElementById('reset').onclick = function() {
-            document.getElementById('speed').value = '';
-            document.getElementById('lookahead').value = '';
-            document.getElementById('results').innerHTML = '';
-            document.getElementById('stats').innerText = '';
-        };
+        }
     </script>
 </body>
 </html>
