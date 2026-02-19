@@ -35,8 +35,14 @@
       config
     );
 
-    document.getElementById("output").textContent =
-      JSON.stringify(summary, null, 2);
+     document.getElementById("output").innerHTML = `
+Direction: ${summary.direction}
+Distance: ${summary.distanceMiles.toFixed(2)} miles
+Locks: ${summary.lockCount}
+ETA: ${summary.etaHours.toFixed(2)} hours
+Next Feature: ${summary.nextFeature ? summary.nextFeature.name : "None"}
+`;
+
   }
 
   document.getElementById("calc").addEventListener("click", render);
