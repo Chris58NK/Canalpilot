@@ -60,6 +60,66 @@ Distance: ${summary.distanceMiles.toFixed(2)} miles
 Locks: ${summary.lockCount}
 ETA: ${summary.etaHours.toFixed(2)} hours
 Next Feature: ${summary.nextFeature ? summary.nextFeature.name : "None"}
+<h1>CanalPilot</h1>
+
+<label>
+  Start chainage:
+  <input id="start" type="number" value="0" />
+</label>
+
+<label style="margin-left: 12px;">
+  End chainage:
+  <input id="end" type="number" value="3200" />
+</label>
+
+<button id="calc" style="margin-left: 12px;">Calculate</button>
+
+<label style="margin-left: 12px;">
+  Look ahead (hours):
+  <input id="hours" type="number" value="1" step="0.5" min="0.5" />
+</label>
+
+<label style="margin-left: 12px;">
+  Speed (mph):
+  <input id="speed" type="number" value="3" step="0.5" min="0.5" />
+</label>
+
+ <pre id="output"></pre>
+
+<script type="module">
+  import { getRouteSummary, getWindowFeatures } from "./src/engine/routingEngine.js";
+  import { DEFAULT_CONFIG } from "./src/engine/config.js";
+  import { testCorridor } from "./src/data/testCorridor.js";
+
+  const config = { ...DEFAULT_CONFIG, maxChainage: testCorridor.length };
+
+  function render() {
+    const start = Number(document.getElementById("start").value);
+    const end = Number(document.getElementById("end").value);
+    const hours = Number(document.getElementById("hours").value);
+    const speed = Number(document.getElementById("speed").value);
+
+    const summary = getRouteSummary(start, end, testCorridor.features, config);
+
+    const windowData = getWindowFeatures(
+      start,
+      summary.direction,
+      hours,
+      speed,
+      testCorridor.features,
+      config
+    );
+
+    const nextItems = windowData.items.length
+      ? windowData.items.map(i => `- ${i.type}: ${i.name} @ ${i.chainage}m`).join("\n")
+      : "None";
+
+    document.getElementById("output").textContent =
+`Direction: ${summary.direction}
+Distance: ${summary.distanceMiles.toFixed(2)} miles
+Locks: ${summary.lockCount}
+ETA: ${summary.etaHours.toFixed(2)} hours
+Next Feature: ${summary.nextFeature ? summary.nextFeature.name : "None"}
 
 Coming up in next ${hours}h @ ${speed}mph:
 ${nextItems}
@@ -67,9 +127,5 @@ ${nextItems}
   }
 
   document.getElementById("calc").addEventListener("click", render);
-  render();
-</script>
-render();
-  // run once on page load
   render();
 </script>
