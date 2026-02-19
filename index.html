@@ -3,71 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canal Pilot - Lookahead Calculation</title>
+    <title>Lookahead Calculation Engine</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        .container { display: flex; }
-        .input-controls { width: 30%; padding: 20px; }
-        .results { width: 70%; padding: 20px; }
-        .badge { padding: 5px; border-radius: 5px; color: white; }
-        .lock { background-color: red; }
-        .bridge { background-color: teal; }
-        .marina { background-color: blue; }
-        .wharf { background-color: green; }
-        .water { background-color: lightblue; }
-        .tunnel { background-color: gray; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .controls {
+            width: 30%;
+            padding-right: 20px;
+        }
+        .results {
+            width: 65%;
+            border-left: 1px solid #ccc;
+            padding-left: 20px;
+        }
+        .feature {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .lock { background-color: #ff9999; }
+        .bridge { background-color: #99ccff; }
+        .marina { background-color: #ccffcc; }
+        .wharf { background-color: #ffff99; }
+        .water { background-color: #99ffff; }
+        .tunnel { background-color: #ffcc99; }
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .controls, .results {
+                width: 100%;
+                border-left: none;
+                padding-left: 0;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="input-controls">
-            <h2>Input Controls</h2>
-            <label for="speed">Speed (km/h):</label>
-            <input type="number" id="speed" placeholder="Enter speed"><br><br>
-            <label for="lookahead">Lookahead (hours):</label>
-            <input type="number" id="lookahead" placeholder="Enter lookahead hours"><br><br>
-            <button onclick="calculateLookahead()">Calculate</button>
-        </div>
-        <div class="results">
-            <h2>Upcoming Canal Features</h2>
-            <div id="featureList"></div>
-            <div id="stats">
-                <h3>Statistics</h3>
-                <p>Total Features Ahead: <span id="totalFeatures">0</span></p>
-                <p>Distance Range: <span id="distanceRange">0 km</span></p>
-                <p>Locks Ahead: <span id="locksAhead">0</span></p>
-            </div>
-        </div>
+    <div class="controls">
+        <h2>Input Controls</h2>
+        <label for="speed">Speed (km/h): </label>
+        <input type="number" id="speed" name="speed"><br><br>
+        <label for="hours">Hours: </label>
+        <input type="number" id="hours" name="hours"><br><br>
+        <button id="calculate">Calculate</button><br><br>
+    </div>
+    <div class="results">
+        <h2>Upcoming Canal Features</h2>
+        <div id="features"></div>
+        <div id="summary"></div>
     </div>
 
     <script src="testCorridor.js"></script>
     <script>
-        function calculateLookahead() {
-            const speed = document.getElementById('speed').value;
-            const lookaheadHours = document.getElementById('lookahead').value;
-            const lookaheadDistance = speed * lookaheadHours;
+        document.getElementById('calculate').onclick = function() {
+            const speed = parseFloat(document.getElementById('speed').value);
+            const hours = parseFloat(document.getElementById('hours').value);
+            const featuresContainer = document.getElementById('features');
+            featuresContainer.innerHTML = '';
+            let summary = { locks: 0, bridges: 0, marinas: 0, wharfs: 0, water: 0, tunnels: 0 };
 
-            const features = []; // Load your features data from the testCorridor
-            // Assuming features data has `type`, `distance`, `ETA`, `chainage`, `locks` properties
-
-            const upcomingFeatures = features.filter(feature => feature.distance <= lookaheadDistance);
-            upcomingFeatures.sort((a, b) => a.distance - b.distance);
-            const featureList = document.getElementById('featureList');
-            featureList.innerHTML = '';
+            const distance = speed * hours;
+            const upcomingFeatures = data.filter(feature => feature.distance <= distance);
 
             upcomingFeatures.forEach(feature => {
                 const featureDiv = document.createElement('div');
-                featureDiv.innerHTML = `<span class='badge ${feature.type}'>${feature.type}</span> ` +
-                    `Distance: ${feature.distance} km, ETA: ${feature.ETA}, Chainage: ${feature.chainage}, Locks: ${feature.locks}`;
-                featureList.appendChild(featureDiv);
+                featureDiv.className = `feature ${feature.type}`;
+                featureDiv.innerHTML = `<strong>${feature.name}</strong> - Distance: ${feature.distance} km, ETA: ${feature.eta} hrs, Chainage: ${feature.chainage}, Lock Counts: ${feature.lockCounts}`;
+                featuresContainer.appendChild(featureDiv);
+                summary[feature.type]++;
             });
 
-            // Update statistics
-            document.getElementById('totalFeatures').innerText = upcomingFeatures.length;
-            document.getElementById('distanceRange').innerText = lookaheadDistance + ' km';
-            const locksCount = upcomingFeatures.reduce((count, feature) => count + feature.locks, 0);
-            document.getElementById('locksAhead').innerText = locksCount;
-        }
+            document.getElementById('summary').innerHTML = `<strong>Summary:</strong> Locks: ${summary.locks}, Bridges: ${summary.bridges}, Marinas: ${summary.marinas}, Wharfs: ${summary.wharfs}, Water: ${summary.water}, Tunnels: ${summary.tunnels}`;
+        };
     </script>
 </body>
 </html>
