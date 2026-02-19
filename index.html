@@ -25,50 +25,36 @@
 <pre id="output"></pre>
 
 <script type="module">
-  import { getRouteSummary, getWindowFeatures } from "./src/engine/routingEngine.js";
-  import { DEFAULT_CONFIG } from "./src/engine/config.js";
-  import { testCorridor } from "./src/data/testCorridor.js";
+  
+import { calculateRoute, featuresWithinHours } from "./engine.js";
 
-  const config = {
-    ...DEFAULT_CONFIG,
-    maxChainage: testCorridor.length
-  };
+function render() {
+  const start = Number(document.getElementById("start").value);
+  const end = Number(document.getElementById("end").value);
+  const hours = Number(document.getElementById("hours").value);
+  const speed = Number(document.getElementById("speed").value);
 
-  function render() {
-    const start = Number(document.getElementById("start").value);
-    const end = Number(document.getElementById("end").value);
+  const summary = calculateRoute(start, end);
+  const windowData = featuresWithinHours(start, end, hours, speed);
 
-    const summary = getRouteSummary(
-     const hours = Number(document.getElementById("hours").value);
-const speed = Number(document.getElementById("speed").value);
+  const nextItems = windowData.items.length
+    ? windowData.items.map(i => `- ${i.type}: ${i.name} @ ${i.chainage}m`).join("\n")
+    : "None";
 
-const windowData = getWindowFeatures(
-  start,
-  summary.direction,
-  hours,
-  speed,
-  testCorridor.features,
-  config
-);
-
-      start,
-      end,
-      testCorridor.features,
-      config
-    );
-
-     document.getElementById("output").innerHTML = `
-Direction: ${summary.direction}
-Distance: ${summary.distanceMiles.toFixed(2)} miles
+  document.getElementById("output").textContent =
+`Direction: ${summary.direction}
+Distance: ${summary.distanceMiles} miles
 Locks: ${summary.lockCount}
-ETA: ${summary.etaHours.toFixed(2)} hours
+ETA: ${summary.etaHours} hours
 Next Feature: ${summary.nextFeature ? summary.nextFeature.name : "None"}
+
+Coming up in next ${hours}h @ ${speed}mph:
+${nextItems}
 `;
+}
 
-  }
-
-  document.getElementById("calc").addEventListener("click", render);
-
+document.getElementById("calc").addEventListener("click", render);
+render();
   // run once on page load
   render();
 </script>
