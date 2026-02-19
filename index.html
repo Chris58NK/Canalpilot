@@ -1,32 +1,49 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canalpilot</title>
-</head>
-<body>
     <script>
-        function validateInputs(hours, speed, start, end, max) {
-            if (isNaN(hours) || isNaN(speed) || isNaN(start) || isNaN(end)) {
-                return false; // Ensure inputs are numbers
+        function validateForm() {
+            const start = parseFloat(document.getElementById('start').value);
+            const end = parseFloat(document.getElementById('end').value);
+            const speed = parseFloat(document.getElementById('speed').value);
+            const hours = parseFloat(document.getElementById('hours').value);
+            const maxCorridorLength = 100; // Example: you can adjust this as per your actual maximum corridor length
+
+            if (isNaN(start) || isNaN(end) || isNaN(speed) || isNaN(hours)) {
+                alert('Please enter valid numbers.');
+                return false;
             }
-            if (hours <= 0 || speed <= 0) {
-                return false; // Both hours and speed must be greater than 0
+            if (speed <= 0 || hours <= 0) {
+                alert('Speed and hours must be greater than 0.');
+                return false;
             }
-            if (start < 0 || end < 0 || start > max || end > max) {
-                return false; // Start and end must be within bounds
+            if (start < 0 || end < 0 || start > maxCorridorLength || end > maxCorridorLength) {
+                alert('Start and end values must be between 0 and the maximum corridor length.');
+                return false;
             }
             if (start === end) {
-                return false; // Start and end must be different
+                alert('Start and end values must be different.');
+                return false;
             }
-            return true; // All validations passed
+            return true;
         }
-
-        // Example usage
-        const max = 100;
-        const hours = 2;
-        const speed = 20;
-        const start = 10;
-        const end = 20;
-        console.log(validateInputs(hours, speed, start, end, max));
     </script>
+</head>
+<body>
+    <h1>Canalpilot</h1>
+    <form onsubmit="return validateForm()">
+        <label for="start">Start:</label>
+        <input type="text" id="start" name="start"><br><br>
+        <label for="end">End:</label>
+        <input type="text" id="end" name="end"><br><br>
+        <label for="speed">Speed:</label>
+        <input type="text" id="speed" name="speed"><br><br>
+        <label for="hours">Hours:</label>
+        <input type="text" id="hours" name="hours"><br><br>
+        <input type="submit" value="Submit">
+    </form>
 </body>
 </html>
