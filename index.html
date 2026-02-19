@@ -3,75 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
-    <title>Canalpilot</title>
+    <title>CanalPilot - Route Calculator</title>
     <style>
         body {
             margin: 0;
-            padding: 0;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            background: linear-gradient(to right, #6a11cb, #2575fc);
-            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
         }
-        .card {
-            background: #fff;
-            border-radius: 12px;
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             padding: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            width: 300px;
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
         }
-        .input {
-            width: 100%;
-            padding: 10px;
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        input, button {
             margin: 10px 0;
+            padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
-        .button {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            background: #2575fc;
-            color: #fff;
+        button {
+            background-color: #667eea;
+            color: white;
             cursor: pointer;
-            transition: background 0.3s;
         }
-        .button:hover {
-            background: #6a11cb;
+        button:hover {
+            background-color: #764ba2;
+        }
+        .output {
+            margin-top: 10px;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
         }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Welcome to Canalpilot</h2>
-        <form id="mainForm">
-            <input type="text" class="input" placeholder="Enter text" required />
-            <input type="email" class="input" placeholder="Enter email" required />
-            <button type="submit" class="button">Submit</button>
-        </form>
+    <div class="container">
+        <h1>CanalPilot - Route Calculator</h1>
+        <input type="number" id="startChainage" placeholder="Start Chainage" />
+        <input type="number" id="endChainage" placeholder="End Chainage" />
+        <input type="number" id="lookAhead" placeholder="Look Ahead Hours" />
+        <input type="number" id="speed" placeholder="Speed" />
+        <button id="calculate">Calculate Route</button>
+        <button id="reset">Reset</button>
+        <div class="output" id="output"></div>
     </div>
     <script>
-        document.getElementById('mainForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            // Form validation logic
-            var inputs = this.getElementsByTagName('input');
-            var isValid = true;
-            for (var i = 0; i < inputs.length; i++) {
-                if (!inputs[i].value) {
-                    isValid = false;
-                    break;
-                }
+        document.getElementById('calculate').onclick = function() {
+            const start = parseFloat(document.getElementById('startChainage').value);
+            const end = parseFloat(document.getElementById('endChainage').value);
+            const lookAhead = parseFloat(document.getElementById('lookAhead').value);
+            const speed = parseFloat(document.getElementById('speed').value);
+            const output = document.getElementById('output');
+            output.className = 'output'; // Reset output class
+            output.innerHTML = '';
+            
+            // Validation Logic
+            if (isNaN(start) || isNaN(end) || isNaN(lookAhead) || isNaN(speed)) {
+                output.classList.add('error');
+                output.innerHTML = 'Please enter valid numbers.';
+                return;
             }
-            if (isValid) {
-                alert('Form Submitted!');
-            } else {
-                alert('Please fill all fields.');
+            if (start < 0 || end < 0 || lookAhead < 0 || speed < 0) {
+                output.classList.add('error');
+                output.innerHTML = 'Values must be positive.';
+                return;
             }
-        });
+            if (start < 0 || end > 3200) {
+                output.classList.add('error');
+                output.innerHTML = 'Values must be within bounds (0-3200).';
+                return;
+            }
+            if (start >= end) {
+                output.classList.add('error');
+                output.innerHTML = 'Start Chainage must be less than End Chainage.';
+                return;
+            }
+            // Calculate and output the route (Placeholder)
+            const result = `Calculating route from ${start} to ${end} at ${speed} speed for ${lookAhead} hours...`;
+            output.classList.add('success');
+            output.innerHTML = result;
+        };
+
+        document.getElementById('reset').onclick = function() {
+            document.getElementById('startChainage').value = '';
+            document.getElementById('endChainage').value = '';
+            document.getElementById('lookAhead').value = '';
+            document.getElementById('speed').value = '';
+            document.getElementById('output').innerHTML = '';
+        };
     </script>
 </body>
 </html>
