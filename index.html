@@ -1,62 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>CanalPilot</title>
-    <style>
-        body { font-family: Arial; margin: 20px; background: #74ebd5; }
-        .container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
-        .panel { background: white; padding: 20px; border-radius: 10px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; }
-        button { width: 100%; padding: 10px; margin: 5px 0; background: #007BFF; color: white; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .feature { padding: 10px; margin: 5px 0; background: #f0f0f0; border-radius: 5px; }
-    </style>
-</head>
-<body>
-    <h1>🚤 CanalPilot</h1>
-    <div class="container">
-        <div class="panel">
-            <h2>Input</h2>
-            <label>Speed (mph):</label>
-            <input type="number" id="speed" value="3" />
-            <label>Hours:</label>
-            <input type="number" id="hours" value="2" />
-            <button onclick="calculate()">Calculate</button>
-        </div>
-        <div class="panel">
-            <h2>Results</h2>
-            <div id="output"></div>
-        </div>
-    </div>
+<script>
+function decimalToTime(decimalHours) {
+    const hours = Math.floor(decimalHours);
+    const minutes = Math.round((decimalHours - hours) * 60);
+    return `${hours}h ${minutes}m`;
+}
 
-    <script src="testCorridor.js"></script>
-    <script>
-        function calculate() {
-            const speed = parseFloat(document.getElementById('speed').value);
-            const hours = parseFloat(document.getElementById('hours').value);
-            const distance = speed * hours;
-            
-            const output = document.getElementById('output');
-            output.innerHTML = '<p><strong>Lookahead: ' + distance.toFixed(2) + ' miles</strong></p>';
-            
-            if (typeof testCorridor === 'undefined') {
-                output.innerHTML += '<p style="color: red;">ERROR: testCorridor not loaded!</p>';
-                return;
-            }
-            
-            const features = testCorridor.features.filter(f => f.cumulativeDistance <= distance);
-            
-            output.innerHTML += '<p>Features: ' + features.length + '</p>';
-            
-            features.forEach(f => {
-                const eta = (f.cumulativeDistance / speed).toFixed(2);
-                output.innerHTML += '<div class="feature">' + 
-                    f.name + '<br/>' +
-                    'Distance: ' + f.cumulativeDistance.toFixed(2) + ' mi, ' +
-                    'ETA: ~' + eta + 'h' +
-                    '</div>';
-            });
-        }
-    </script>
-</body>
-</html>
+// Example usage throughout the page
+const etaDecimal = 1.5; // Replace this with actual decimal ETA values
+const etaDisplay = decimalToTime(etaDecimal);
+console.log(`ETA: ${etaDisplay}`); // This would generally update the DOM instead
+</script>
