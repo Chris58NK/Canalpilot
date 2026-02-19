@@ -1,1 +1,627 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>🚤 CanalPilot - Route Calculator</title><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#74ebd5,#acb6e5);padding:20px;min-height:100vh}.container{max-width:1600px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}h1{grid-column:1/-1;text-align:center;color:white;font-size:28px;margin-bottom:20px}.panel{background:white;padding:20px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.1)}h2{color:#333;font-size:18px;margin-bottom:15px;border-bottom:2px solid #007BFF;padding-bottom:10px}.input-group{margin-bottom:15px}label{display:block;font-weight:bold;margin-bottom:5px;color:#555;font-size:13px}.search-box{width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:14px}.search-box:focus{outline:none;border-color:#007BFF}.search-results{position:absolute;background:white;border:2px solid #007BFF;border-top:none;border-radius:0 0 5px 5px;max-height:250px;overflow-y:auto;width:calc(100% - 4px);z-index:100;display:none}.search-results.show{display:block}.search-item{padding:8px;cursor:pointer;border-bottom:1px solid #eee;font-size:12px}.search-item:hover{background:#f0f8ff}.selected-badge{background:#e8f5e9;padding:8px;border-radius:5px;border-left:4px solid #28a745;font-size:12px;margin-top:8px;display:none}.selected-badge.show{display:block}.button-group{display:flex;gap:10px;margin:20px 0}button{flex:1;padding:10px;background-color:#007BFF;color:white;border:none;border-radius:5px;cursor:pointer;font-weight:bold}button:hover{background-color:#0056b3}#map{height:600px;border-radius:8px}.map-panel{grid-column:2/4;padding:0}.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:15px 0}.stat-box{background:#f0f8ff;padding:12px;border-radius:5px;border-left:4px solid #007BFF;text-align:center}.stat-label{font-size:11px;color:#666}.stat-value{font-size:20px;font-weight:bold;color:#007BFF}.features-list{max-height:400px;overflow-y:auto}.feature-item{padding:10px;margin:8px 0;background:#f9f9f9;border-left:4px solid #007BFF;border-radius:4px;font-size:12px;cursor:pointer}.feature-item:hover{background:#f0f0f0}.badge{display:inline-block;padding:2px 6px;border-radius:10px;color:white;font-size:10px;font-weight:bold;margin-right:5px}.badge-lock{background:#ff6b6b}.badge-bridge{background:#4ecdc4}.badge-marina{background:#45b7d1}.badge-wharf{background:#96ceb4}.badge-water{background:#3498db}.badge-tunnel{background:#95a5a6}.badge-junction{background:#667eea}.empty-state{text-align:center;padding:30px 10px;color:#999}.route-info{background:#e8f5e9;padding:10px;border-radius:5px;margin:10px 0;border-left:4px solid #28a745;font-size:12px}.search-container{position:relative}@media (max-width:1200px){.container{grid-template-columns:1fr 1fr}.map-panel{grid-column:1/-1}h1{grid-column:1/-1}}</style></head><body><h1>🚤 CanalPilot - Route Calculator</h1><div class="container"><div class="panel"><h2>Route Setup</h2><div class="input-group"><label>Start Point:</label><div class="search-container"><input type="text" id="startSearch" class="search-box" placeholder="Type to search..."><div id="startResults" class="search-results"></div></div><div id="startBadge" class="selected-badge"></div></div><div class="input-group"><label>End Point:</label><div class="search-container"><input type="text" id="endSearch" class="search-box" placeholder="Type to search..."><div id="endResults" class="search-results"></div></div><div id="endBadge" class="selected-badge"></div></div><div id="routeInfo" class="route-info" style="display:none">Distance: <strong id="routeDist">0</strong> mi | Duration: <strong id="routeDur">0</strong></div><h2>Calculate</h2><div class="input-group"><label>Speed (mph):</label><input type="number" id="speed" value="3" min="0.5" max="10" step="0.5" class="search-box"></div><div class="input-group"><label>Lookahead (hours):</label><input type="number" id="lookahead" value="2" min="0.5" max="24" step="0.5" class="search-box"></div><div class="button-group"><button onclick="calculateLookahead()">Calculate</button><button onclick="resetForm()">Reset</button></div><div class="stats"><div class="stat-box"><div class="stat-label">Corridor</div><div class="stat-value">23.1 mi</div></div><div class="stat-box"><div class="stat-label">Features</div><div class="stat-value">104</div></div></div></div><div class="panel"><h2>Upcoming Features</h2><div id="results"><div class="empty-state">Select start point and click Calculate</div></div></div><div class="panel map-panel"><div id="map"></div></div></div><script src="testCorridor.js"></script><script>let map;let markers=[];let polyline;let startMarker;let endMarker;let currentStart=null;let currentEnd=null;function initMap(){map=L.map('map').setView([52.36,-1.1],10);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);setupSearch('startSearch','startResults','startBadge','start');setupSearch('endSearch','endResults','endBadge','end');}function setupSearch(inputId,resultsId,badgeId,type){const input=document.getElementById(inputId);const resultsDiv=document.getElementById(resultsId);input.addEventListener('input',function(){const query=this.value.toLowerCase();resultsDiv.innerHTML='';if(query.length===0){resultsDiv.classList.remove('show');return;}const filtered=testCorridor.features.filter(f=>f.name.toLowerCase().includes(query)).slice(0,15);if(filtered.length===0){resultsDiv.innerHTML='<div class="search-item" style="color:#999;">No matches</div>';}else{filtered.forEach(f=>{const item=document.createElement('div');item.className='search-item';item.textContent=f.name+' ('+f.cumulativeDistance.toFixed(1)+' mi)';item.onclick=function(){selectFeature(f,type,inputId,badgeId);};resultsDiv.appendChild(item);});}resultsDiv.classList.add('show');});document.addEventListener('click',function(e){if(!e.target.closest('.search-container')){resultsDiv.classList.remove('show');}});}function selectFeature(feature,type,inputId,badgeId){const input=document.getElementById(inputId);const badge=document.getElementById(badgeId);input.value=feature.name;badge.innerHTML='✓ <strong>'+feature.name+'</strong><br>'+feature.cumulativeDistance.toFixed(1)+' mi';badge.classList.add('show');document.getElementById(inputId.replace('Search','Results')).classList.remove('show');if(type==='start'){currentStart=feature;addStartMarker();}else{currentEnd=feature;addEndMarker();}}function addStartMarker(){if(currentStart){if(startMarker)map.removeLayer(startMarker);startMarker=L.circleMarker([currentStart.latitude,currentStart.longitude],{radius:10,fillColor:'#28a745',color:'white',weight:2,fillOpacity:0.9}).bindPopup('START: '+currentStart.name).addTo(map);updateRoute();}}function addEndMarker(){if(currentEnd){if(endMarker)map.removeLayer(endMarker);endMarker=L.circleMarker([currentEnd.latitude,currentEnd.longitude],{radius:10,fillColor:'#dc3545',color:'white',weight:2,fillOpacity:0.9}).bindPopup('END: '+currentEnd.name).addTo(map);updateRoute();}}function updateRoute(){if(currentStart&&currentEnd){const dist=currentEnd.cumulativeDistance-currentStart.cumulativeDistance;const speed=parseFloat(document.getElementById('speed').value)||3;const hours=Math.floor(dist/speed);const mins=Math.round((dist/speed-hours)*60);const timeStr=hours>0?hours+'h '+mins+'m':mins+'m';document.getElementById('routeDist').textContent=dist.toFixed(1);document.getElementById('routeDur').textContent=timeStr;document.getElementById('routeInfo').style.display='block';}}function calculateLookahead(){if(!currentStart){alert('Select a start point');return;}const speed=parseFloat(document.getElementById('speed').value);const hours=parseFloat(document.getElementById('lookahead').value);const distance=speed*hours;const maxDist=currentStart.cumulativeDistance+distance;const features=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);const resultDiv=document.getElementById('results');resultDiv.innerHTML='';if(features.length===0){resultDiv.innerHTML='<div class="empty-state">No features found</div>';clearMarkers();return;}const locks=features.filter(f=>f.type==='lock').length;const bridges=features.filter(f=>f.type==='bridge').length;const marinas=features.filter(f=>f.type==='marina').length;let html='<div class="stats"><div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">'+features.length+'</div></div>';html+='<div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">'+locks+'</div></div>';html+='<div class="stat-box"><div class="stat-label">Bridges</div><div class="stat-value">'+bridges+'</div></div>';html+='<div class="stat-box"><div class="stat-label">Marinas</div><div class="stat-value">'+marinas+'</div></div></div>';html+='<div class="features-list">';features.forEach(f=>{const eta=(f.cumulativeDistance-currentStart.cumulativeDistance)/speed;const h=Math.floor(eta);const m=Math.round((eta-h)*60);const timeStr=h>0?h+'h '+m+'m':m+'m';html+='<div class="feature-item" onclick="map.setView(['+f.latitude+','+f.longitude+'],14)">';html+='<span class="badge badge-'+f.type+'">'+f.type.toUpperCase()+'</span>';html+='<strong>'+f.name+'</strong><br>';html+='<small>'+f.cumulativeDistance.toFixed(1)+' mi | ETA: '+timeStr+'</small>';html+='</div>';});html+='</div>';resultDiv.innerHTML=html;clearMarkers();const coords=features.map(f=>[f.latitude,f.longitude]);polyline=L.polyline(coords,{color:'#667eea',weight:3,opacity:0.7}).addTo(map);features.forEach(f=>{const colors={lock:'#ff6b6b',bridge:'#4ecdc4',marina:'#45b7d1',wharf:'#96ceb4',water:'#3498db',tunnel:'#95a5a6',junction:'#667eea'};const m=L.circleMarker([f.latitude,f.longitude],{radius:6,fillColor:colors[f.type]||'#007BFF',color:'white',weight:1,fillOpacity:0.8}).bindPopup(f.name).addTo(map);markers.push(m);});const allCoords=coords.concat([[currentStart.latitude,currentStart.longitude]]);if(currentEnd)allCoords.push([currentEnd.latitude,currentEnd.longitude]);const bounds=L.latLngBounds(allCoords);map.fitBounds(bounds,{padding:[50,50]});}function clearMarkers(){markers.forEach(m=>map.removeLayer(m));markers=[];if(polyline)map.removeLayer(polyline);}function resetForm(){document.getElementById('startSearch').value='';document.getElementById('endSearch').value='';document.getElementById('startBadge').classList.remove('show');document.getElementById('endBadge').classList.remove('show');document.getElementById('speed').value='3';document.getElementById('lookahead').value='2';document.getElementById('results').innerHTML='<div class="empty-state">Select start point and click Calculate</div>';document.getElementById('routeInfo').style.display='none';currentStart=null;currentEnd=null;clearMarkers();if(startMarker)map.removeLayer(startMarker);if(endMarker)map.removeLayer(endMarker);}window.onload=function(){initMap();};</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🚤 CanalPilot - Route Calculator</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #74ebd5, #acb6e5); min-height: 100vh; }
+
+    /* ── Desktop layout ─────────────────────────────────────────── */
+    .page-header { text-align: center; color: white; font-size: 28px; padding: 20px 20px 0; }
+    .container { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; padding: 20px; }
+    .map-panel { grid-column: 2 / 4; padding: 0; }
+    #map { height: 600px; border-radius: 8px; }
+
+    /* ── Shared panel styles ─────────────────────────────────────── */
+    .panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h2 { color: #333; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #007BFF; padding-bottom: 10px; }
+    .input-group { margin-bottom: 15px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 13px; }
+    .search-box { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; }
+    .search-box:focus { outline: none; border-color: #007BFF; }
+    .search-results { position: absolute; background: white; border: 2px solid #007BFF; border-top: none; border-radius: 0 0 5px 5px; max-height: 250px; overflow-y: auto; width: calc(100% - 4px); z-index: 1000; display: none; }
+    .search-results.show { display: block; }
+    .search-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 12px; }
+    .search-item:hover { background: #f0f8ff; }
+    .selected-badge { background: #e8f5e9; padding: 8px; border-radius: 5px; border-left: 4px solid #28a745; font-size: 12px; margin-top: 8px; display: none; }
+    .selected-badge.show { display: block; }
+    .button-group { display: flex; gap: 10px; margin: 20px 0; }
+    button { flex: 1; padding: 10px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; min-height: 44px; font-size: 15px; }
+    button:hover { background-color: #0056b3; }
+    button:active { background-color: #004494; }
+    .btn-gps { background-color: #28a745; }
+    .btn-gps:hover { background-color: #1e7e34; }
+    .btn-reset { background-color: #6c757d; }
+    .btn-reset:hover { background-color: #545b62; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+    .stat-box { background: #f0f8ff; padding: 12px; border-radius: 5px; border-left: 4px solid #007BFF; text-align: center; }
+    .stat-label { font-size: 11px; color: #666; }
+    .stat-value { font-size: 20px; font-weight: bold; color: #007BFF; }
+    .features-list { max-height: 400px; overflow-y: auto; }
+    .feature-item { padding: 10px; margin: 8px 0; background: #f9f9f9; border-left: 4px solid #007BFF; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .feature-item:hover { background: #f0f0f0; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 10px; color: white; font-size: 10px; font-weight: bold; margin-right: 5px; }
+    .badge-lock { background: #ff6b6b; }
+    .badge-bridge { background: #4ecdc4; }
+    .badge-marina { background: #45b7d1; }
+    .badge-wharf { background: #96ceb4; }
+    .badge-water { background: #3498db; }
+    .badge-tunnel { background: #95a5a6; }
+    .badge-junction { background: #667eea; }
+    .badge-winding { background: #f39c12; }
+    .empty-state { text-align: center; padding: 30px 10px; color: #999; }
+    .route-info { background: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #28a745; font-size: 12px; }
+    .search-container { position: relative; }
+
+    /* ── GPS status bar ──────────────────────────────────────────── */
+    .gps-bar { background: rgba(255,255,255,0.15); color: white; text-align: center; padding: 6px 20px; font-size: 13px; letter-spacing: 0.02em; }
+    .gps-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #aaa; margin-right: 6px; vertical-align: middle; }
+    .gps-dot.active { background: #4285F4; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Speed slider ────────────────────────────────────────────── */
+    .speed-row { display: flex; align-items: center; gap: 10px; }
+    .speed-row input[type=range] { flex: 1; accent-color: #007BFF; height: 6px; }
+    .speed-val { min-width: 40px; text-align: center; font-weight: bold; color: #007BFF; }
+
+    /* ── Tablet breakpoint ───────────────────────────────────────── */
+    @media (max-width: 1200px) {
+      .container { grid-template-columns: 1fr 1fr; }
+      .map-panel { grid-column: 1 / -1; }
+    }
+
+    /* ── Mobile layout ───────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      body { background: #1a1a2e; padding: 0; }
+      .page-header { font-size: 18px; padding: 10px; }
+      .gps-bar { font-size: 12px; padding: 5px 10px; }
+
+      /* Full-screen two-pane layout */
+      .mobile-wrapper { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+      .map-pane { flex: 0 0 50%; position: relative; }
+      .map-pane #map { height: 100%; border-radius: 0; }
+      .controls-pane { flex: 1 1 50%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+      /* Hide desktop grid */
+      .container { display: none; }
+      .page-header { display: none; }
+
+      /* Mobile panels */
+      .mobile-panel { background: white; border-radius: 0; padding: 12px 16px; margin-bottom: 2px; box-shadow: none; }
+      .mobile-panel h2 { font-size: 15px; margin-bottom: 10px; padding-bottom: 6px; }
+      .mobile-input-group { margin-bottom: 10px; }
+      .mobile-input-group label { font-size: 12px; margin-bottom: 4px; }
+      .search-box { padding: 12px; font-size: 16px; /* iOS Safari auto-zooms inputs below 16px; keeping at 16px prevents that */ }
+      .search-item { padding: 12px; font-size: 14px; }
+      button { padding: 14px; font-size: 16px; }
+      .mobile-button-group { display: flex; gap: 8px; margin: 10px 0; }
+      .mobile-button-group button { flex: 1; }
+
+      /* Mobile feature cards */
+      .mobile-feature-item { display: flex; align-items: center; padding: 12px; margin: 4px 0; background: #f9f9f9; border-left: 4px solid #007BFF; border-radius: 6px; cursor: pointer; gap: 10px; }
+      .mobile-feature-item:active { background: #e8f0fe; }
+      .feature-emoji { font-size: 22px; flex-shrink: 0; }
+      .feature-info { flex: 1; min-width: 0; }
+      .feature-name { font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .feature-meta { font-size: 11px; color: #666; margin-top: 2px; }
+
+      /* Route summary card */
+      .mobile-route-summary { background: #e8f5e9; border-left: 4px solid #28a745; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; font-size: 13px; }
+      .mobile-route-summary .summary-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+      .mobile-route-summary strong { color: #1e7e34; }
+
+      /* Speed slider mobile */
+      .speed-row input[type=range] { height: 8px; }
+    }
+
+    /* ── Landscape mobile ────────────────────────────────────────── */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .map-pane { flex: 0 0 100%; max-height: 55vh; }
+      .controls-pane { flex: 0 0 45vh; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MOBILE LAYOUT  (hidden on desktop via JS class on body)
+═══════════════════════════════════════════════════════════════ -->
+<div class="mobile-wrapper" id="mobileWrapper" style="display:none">
+  <!-- GPS status bar -->
+  <div class="gps-bar">
+    <span class="gps-dot" id="gpsDotMobile"></span>
+    <span id="gpsDisplayMobile">Locating…</span>
+  </div>
+
+  <!-- Top 50%: map -->
+  <div class="map-pane">
+    <div id="mapMobile"></div>
+  </div>
+
+  <!-- Bottom 50%: scrollable controls -->
+  <div class="controls-pane" id="controlsPane">
+
+    <!-- Route Setup -->
+    <div class="mobile-panel">
+      <h2>🗺️ Route Setup</h2>
+      <div class="mobile-input-group">
+        <label>Start Point:</label>
+        <div class="search-container">
+          <input type="text" id="startSearchM" class="search-box" placeholder="Search or use GPS…" autocomplete="off">
+          <div id="startResultsM" class="search-results"></div>
+        </div>
+        <div id="startBadgeM" class="selected-badge"></div>
+      </div>
+      <button class="btn-gps" onclick="useGPSAsStart()" style="width:100%;margin-bottom:10px">📍 Use Current GPS Location</button>
+      <div class="mobile-input-group">
+        <label>End Point:</label>
+        <div class="search-container">
+          <input type="text" id="endSearchM" class="search-box" placeholder="Search destination…" autocomplete="off">
+          <div id="endResultsM" class="search-results"></div>
+        </div>
+        <div id="endBadgeM" class="selected-badge"></div>
+      </div>
+
+      <div class="mobile-input-group">
+        <label>Speed: <span id="speedLabelM">3</span> mph</label>
+        <div class="speed-row">
+          <span>2</span>
+          <input type="range" id="speedM" min="2" max="5" step="0.5" value="3" oninput="document.getElementById('speedLabelM').textContent=this.value">
+          <span>5</span>
+          <span class="speed-val" id="speedValM">3</span>
+        </div>
+      </div>
+
+      <div class="mobile-button-group">
+        <button onclick="calculateMobile()">🧮 Calculate</button>
+        <button class="btn-reset" onclick="resetMobile()">↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- Route summary (shown after calculate) -->
+    <div class="mobile-route-summary" id="mobileRouteSummary" style="display:none;margin:0 0 2px 0;border-radius:0">
+      <div class="summary-row"><span>📏 Distance</span><strong id="mSumDist">—</strong></div>
+      <div class="summary-row"><span>⏱️ Duration</span><strong id="mSumDur">—</strong></div>
+    </div>
+
+    <!-- Next 5 features -->
+    <div class="mobile-panel" id="mobileFeaturesPanel">
+      <h2>⚓ Next 5 Features Ahead</h2>
+      <div id="mobileResults"><div class="empty-state">Set start point &amp; calculate</div></div>
+    </div>
+
+  </div><!-- /controls-pane -->
+</div><!-- /mobile-wrapper -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DESKTOP LAYOUT
+═══════════════════════════════════════════════════════════════ -->
+<h1 class="page-header">🚤 CanalPilot - Route Calculator</h1>
+<div class="gps-bar" id="gpsBarDesktop">
+  <span class="gps-dot" id="gpsDotDesktop"></span>
+  <span id="gpsDisplayDesktop">GPS not active</span>
+</div>
+<div class="container">
+  <div class="panel">
+    <h2>Route Setup</h2>
+    <div class="input-group">
+      <label>Start Point:</label>
+      <div class="search-container">
+        <input type="text" id="startSearch" class="search-box" placeholder="Type to search...">
+        <div id="startResults" class="search-results"></div>
+      </div>
+      <div id="startBadge" class="selected-badge"></div>
+    </div>
+    <div class="input-group">
+      <label>End Point:</label>
+      <div class="search-container">
+        <input type="text" id="endSearch" class="search-box" placeholder="Type to search...">
+        <div id="endResults" class="search-results"></div>
+      </div>
+      <div id="endBadge" class="selected-badge"></div>
+    </div>
+    <div id="routeInfo" class="route-info" style="display:none">
+      Distance: <strong id="routeDist">0</strong> mi | Duration: <strong id="routeDur">0</strong>
+    </div>
+    <h2>Calculate</h2>
+    <div class="input-group">
+      <label>Speed (mph):</label>
+      <input type="number" id="speed" value="3" min="0.5" max="10" step="0.5" class="search-box">
+    </div>
+    <div class="input-group">
+      <label>Lookahead (hours):</label>
+      <input type="number" id="lookahead" value="2" min="0.5" max="24" step="0.5" class="search-box">
+    </div>
+    <div class="button-group">
+      <button onclick="calculateLookahead()">Calculate</button>
+      <button class="btn-reset" onclick="resetForm()">Reset</button>
+    </div>
+    <div class="stats">
+      <div class="stat-box"><div class="stat-label">Corridor</div><div class="stat-value">23.1 mi</div></div>
+      <div class="stat-box"><div class="stat-label">Features</div><div class="stat-value">104</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Upcoming Features</h2>
+    <div id="results"><div class="empty-state">Select start point and click Calculate</div></div>
+  </div>
+
+  <div class="panel map-panel">
+    <div id="map"></div>
+  </div>
+</div>
+
+<script src="testCorridor.js"></script>
+<script>
+/* ─── Shared state ─────────────────────────────────────────────── */
+let map, mapMobile;
+let markers = [], markersM = [];
+let polyline, polylineM;
+let startMarker, endMarker, startMarkerM, endMarkerM;
+let currentStart = null, currentEnd = null;
+let currentStartM = null, currentEndM = null;
+let gpsMarker = null, gpsMarkerM = null;
+let gpsWatchId = null;
+let currentGPS = null;
+
+/* ─── Mobile detection ─────────────────────────────────────────── */
+const isMobile = () => window.innerWidth <= 768;
+
+/* ─── Init ─────────────────────────────────────────────────────── */
+function initMap() {
+  if (isMobile()) {
+    document.getElementById('mobileWrapper').style.display = 'flex';
+    mapMobile = L.map('mapMobile').setView([52.36, -1.1], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(mapMobile);
+    setupSearch('startSearchM', 'startResultsM', 'startBadgeM', 'start', true);
+    setupSearch('endSearchM', 'endResultsM', 'endBadgeM', 'end', true);
+    document.getElementById('speedM').addEventListener('input', function() {
+      document.getElementById('speedValM').textContent = this.value;
+    });
+    startGPSTracking();
+  } else {
+    map = L.map('map').setView([52.36, -1.1], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
+    setupSearch('startSearch', 'startResults', 'startBadge', 'start', false);
+    setupSearch('endSearch', 'endResults', 'endBadge', 'end', false);
+    startGPSTracking();
+  }
+}
+
+/* ─── GPS tracking ─────────────────────────────────────────────── */
+function startGPSTracking() {
+  if (!navigator.geolocation) return;
+  gpsWatchId = navigator.geolocation.watchPosition(
+    updateGPS,
+    function(err) { console.warn('GPS error:', err.message); },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+  );
+}
+
+function updateGPS(pos) {
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
+  currentGPS = { lat, lng };
+
+  const latStr = Math.abs(lat).toFixed(2) + '°' + (lat >= 0 ? 'N' : 'S');
+  const lngStr = Math.abs(lng).toFixed(2) + '°' + (lng >= 0 ? 'E' : 'W');
+  const locText = 'Current Location: ' + latStr + ' ' + lngStr;
+
+  // Update desktop GPS bar
+  const ddot = document.getElementById('gpsDotDesktop');
+  const ddisplay = document.getElementById('gpsDisplayDesktop');
+  if (ddot) { ddot.classList.add('active'); ddisplay.textContent = locText; }
+
+  // Update mobile GPS bar
+  const mdot = document.getElementById('gpsDotMobile');
+  const mdisplay = document.getElementById('gpsDisplayMobile');
+  if (mdot) { mdot.classList.add('active'); mdisplay.textContent = locText; }
+
+  // Blue dot on desktop map
+  if (map) {
+    if (!gpsMarker) {
+      gpsMarker = L.circleMarker([lat, lng], { radius: 10, fillColor: '#4285F4', color: 'white', weight: 2, fillOpacity: 0.9 })
+        .bindPopup('📍 Your Location').addTo(map);
+    } else {
+      gpsMarker.setLatLng([lat, lng]);
+    }
+  }
+
+  // Blue dot on mobile map
+  if (mapMobile) {
+    if (!gpsMarkerM) {
+      gpsMarkerM = L.circleMarker([lat, lng], { radius: 10, fillColor: '#4285F4', color: 'white', weight: 2, fillOpacity: 0.9 })
+        .bindPopup('📍 Your Location').addTo(mapMobile);
+    } else {
+      gpsMarkerM.setLatLng([lat, lng]);
+    }
+  }
+}
+
+function useGPSAsStart() {
+  if (!currentGPS) { alert('GPS not available yet. Please allow location access.'); return; }
+
+  // Find nearest corridor feature to GPS position
+  let nearest = null, nearestDist = Infinity;
+  testCorridor.features.forEach(function(f) {
+    const d = Math.hypot(f.latitude - currentGPS.lat, f.longitude - currentGPS.lng);
+    if (d < nearestDist) { nearestDist = d; nearest = f; }
+  });
+
+  if (nearest) {
+    currentStartM = nearest;
+    document.getElementById('startSearchM').value = nearest.name;
+    const badge = document.getElementById('startBadgeM');
+    badge.innerHTML = '📍 <strong>' + nearest.name + '</strong><br>' + nearest.cumulativeDistance.toFixed(1) + ' mi';
+    badge.classList.add('show');
+    addStartMarkerM();
+    if (mapMobile) mapMobile.setView([currentGPS.lat, currentGPS.lng], 14);
+    document.getElementById('startSearchM').blur();
+  }
+}
+
+/* ─── Search (shared, works for both desktop and mobile) ────────── */
+function setupSearch(inputId, resultsId, badgeId, type, mobile) {
+  const input = document.getElementById(inputId);
+  const resultsDiv = document.getElementById(resultsId);
+  if (!input) return;
+
+  input.addEventListener('input', function() {
+    const query = this.value.toLowerCase();
+    resultsDiv.innerHTML = '';
+    if (query.length === 0) { resultsDiv.classList.remove('show'); return; }
+    const filtered = testCorridor.features.filter(function(f) {
+      return f.name.toLowerCase().includes(query);
+    }).slice(0, 15);
+    if (filtered.length === 0) {
+      resultsDiv.innerHTML = '<div class="search-item" style="color:#999;">No matches</div>';
+    } else {
+      filtered.forEach(function(f) {
+        const item = document.createElement('div');
+        item.className = 'search-item';
+        item.textContent = f.name + ' (' + f.cumulativeDistance.toFixed(1) + ' mi)';
+        item.onclick = function() {
+          selectFeature(f, type, inputId, badgeId, mobile);
+          document.getElementById(inputId).blur(); // auto-hide keyboard
+        };
+        resultsDiv.appendChild(item);
+      });
+    }
+    resultsDiv.classList.add('show');
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-container')) resultsDiv.classList.remove('show');
+  });
+}
+
+function selectFeature(feature, type, inputId, badgeId, mobile) {
+  const input = document.getElementById(inputId);
+  const badge = document.getElementById(badgeId);
+  input.value = feature.name;
+  badge.innerHTML = '✓ <strong>' + feature.name + '</strong><br>' + feature.cumulativeDistance.toFixed(1) + ' mi';
+  badge.classList.add('show');
+  document.getElementById(inputId.replace('Search', 'Results')).classList.remove('show');
+
+  if (mobile) {
+    if (type === 'start') { currentStartM = feature; addStartMarkerM(); }
+    else { currentEndM = feature; addEndMarkerM(); }
+  } else {
+    if (type === 'start') { currentStart = feature; addStartMarker(); }
+    else { currentEnd = feature; addEndMarker(); }
+  }
+}
+
+/* ─── Desktop markers / route ──────────────────────────────────── */
+function addStartMarker() {
+  if (!currentStart) return;
+  if (startMarker) map.removeLayer(startMarker);
+  startMarker = L.circleMarker([currentStart.latitude, currentStart.longitude],
+    { radius: 10, fillColor: '#28a745', color: 'white', weight: 2, fillOpacity: 0.9 })
+    .bindPopup('START: ' + currentStart.name).addTo(map);
+  updateRoute();
+}
+function addEndMarker() {
+  if (!currentEnd) return;
+  if (endMarker) map.removeLayer(endMarker);
+  endMarker = L.circleMarker([currentEnd.latitude, currentEnd.longitude],
+    { radius: 10, fillColor: '#dc3545', color: 'white', weight: 2, fillOpacity: 0.9 })
+    .bindPopup('END: ' + currentEnd.name).addTo(map);
+  updateRoute();
+}
+function updateRoute() {
+  if (currentStart && currentEnd) {
+    const dist = currentEnd.cumulativeDistance - currentStart.cumulativeDistance;
+    const speed = parseFloat(document.getElementById('speed').value) || 3;
+    const hours = Math.floor(dist / speed);
+    const mins = Math.round((dist / speed - hours) * 60);
+    const timeStr = hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
+    document.getElementById('routeDist').textContent = dist.toFixed(1);
+    document.getElementById('routeDur').textContent = timeStr;
+    document.getElementById('routeInfo').style.display = 'block';
+  }
+}
+function calculateLookahead() {
+  if (!currentStart) { alert('Select a start point'); return; }
+  const speed = parseFloat(document.getElementById('speed').value);
+  const hours = parseFloat(document.getElementById('lookahead').value);
+  const maxDist = currentStart.cumulativeDistance + speed * hours;
+  const features = testCorridor.features.filter(function(f) {
+    return f.cumulativeDistance > currentStart.cumulativeDistance && f.cumulativeDistance <= maxDist;
+  }).sort(function(a, b) { return a.cumulativeDistance - b.cumulativeDistance; });
+
+  const resultDiv = document.getElementById('results');
+  resultDiv.innerHTML = '';
+  if (features.length === 0) { resultDiv.innerHTML = '<div class="empty-state">No features found</div>'; clearMarkers(); return; }
+
+  const locks = features.filter(function(f) { return f.type === 'lock'; }).length;
+  const bridges = features.filter(function(f) { return f.type === 'bridge'; }).length;
+  const marinas = features.filter(function(f) { return f.type === 'marina'; }).length;
+  let html = '<div class="stats">' +
+    '<div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">' + features.length + '</div></div>' +
+    '<div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">' + locks + '</div></div>' +
+    '<div class="stat-box"><div class="stat-label">Bridges</div><div class="stat-value">' + bridges + '</div></div>' +
+    '<div class="stat-box"><div class="stat-label">Marinas</div><div class="stat-value">' + marinas + '</div></div>' +
+    '</div><div class="features-list">';
+  features.forEach(function(f) {
+    const eta = (f.cumulativeDistance - currentStart.cumulativeDistance) / speed;
+    const h = Math.floor(eta); const m = Math.round((eta - h) * 60);
+    const timeStr = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+    html += '<div class="feature-item" onclick="map.setView([' + f.latitude + ',' + f.longitude + '],14)">' +
+      '<span class="badge badge-' + f.type + '">' + f.type.toUpperCase() + '</span>' +
+      '<strong>' + f.name + '</strong><br>' +
+      '<small>' + f.cumulativeDistance.toFixed(1) + ' mi | ETA: ' + timeStr + '</small></div>';
+  });
+  html += '</div>';
+  resultDiv.innerHTML = html;
+  clearMarkers();
+  plotFeatureMarkers(features, map, markers);
+  const allCoords = features.map(function(f) { return [f.latitude, f.longitude]; })
+    .concat([[currentStart.latitude, currentStart.longitude]]);
+  if (currentEnd) allCoords.push([currentEnd.latitude, currentEnd.longitude]);
+  polyline = L.polyline(allCoords, { color: '#667eea', weight: 3, opacity: 0.7 }).addTo(map);
+  map.fitBounds(L.latLngBounds(allCoords), { padding: [50, 50] });
+}
+function clearMarkers() {
+  markers.forEach(function(m) { map.removeLayer(m); }); markers = [];
+  if (polyline) map.removeLayer(polyline);
+}
+function resetForm() {
+  ['startSearch','endSearch'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['startBadge','endBadge'].forEach(function(id) { document.getElementById(id).classList.remove('show'); });
+  document.getElementById('speed').value = '3';
+  document.getElementById('lookahead').value = '2';
+  document.getElementById('results').innerHTML = '<div class="empty-state">Select start point and click Calculate</div>';
+  document.getElementById('routeInfo').style.display = 'none';
+  currentStart = null; currentEnd = null;
+  clearMarkers();
+  if (startMarker) map.removeLayer(startMarker);
+  if (endMarker) map.removeLayer(endMarker);
+}
+
+/* ─── Mobile markers / route ───────────────────────────────────── */
+function addStartMarkerM() {
+  if (!currentStartM) return;
+  if (startMarkerM) mapMobile.removeLayer(startMarkerM);
+  startMarkerM = L.circleMarker([currentStartM.latitude, currentStartM.longitude],
+    { radius: 10, fillColor: '#28a745', color: 'white', weight: 2, fillOpacity: 0.9 })
+    .bindPopup('START: ' + currentStartM.name).addTo(mapMobile);
+  updateRouteM();
+}
+function addEndMarkerM() {
+  if (!currentEndM) return;
+  if (endMarkerM) mapMobile.removeLayer(endMarkerM);
+  endMarkerM = L.circleMarker([currentEndM.latitude, currentEndM.longitude],
+    { radius: 10, fillColor: '#dc3545', color: 'white', weight: 2, fillOpacity: 0.9 })
+    .bindPopup('END: ' + currentEndM.name).addTo(mapMobile);
+  updateRouteM();
+}
+function updateRouteM() {
+  if (currentStartM && currentEndM) {
+    const dist = currentEndM.cumulativeDistance >= currentStartM.cumulativeDistance
+      ? currentEndM.cumulativeDistance - currentStartM.cumulativeDistance
+      : currentStartM.cumulativeDistance - currentEndM.cumulativeDistance;
+    const speed = parseFloat(document.getElementById('speedM').value) || 3;
+    const hours = Math.floor(dist / speed);
+    const mins = Math.round((dist / speed - hours) * 60);
+    const timeStr = hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
+    document.getElementById('mSumDist').textContent = dist.toFixed(1) + ' mi';
+    document.getElementById('mSumDur').textContent = timeStr;
+    document.getElementById('mobileRouteSummary').style.display = 'block';
+  }
+}
+
+function calculateMobile() {
+  if (!currentStartM) { alert('Set a start point first'); return; }
+  const speed = parseFloat(document.getElementById('speedM').value) || 3;
+
+  // On mobile show only locks, winding holes, water points — next 5 ahead
+  const mobileTypes = ['lock', 'winding', 'water'];
+  const next5 = testCorridor.features
+    .filter(function(f) {
+      return f.cumulativeDistance > currentStartM.cumulativeDistance && mobileTypes.includes(f.type);
+    })
+    .sort(function(a, b) { return a.cumulativeDistance - b.cumulativeDistance; })
+    .slice(0, 5);
+
+  const resultDiv = document.getElementById('mobileResults');
+  if (next5.length === 0) {
+    resultDiv.innerHTML = '<div class="empty-state">No upcoming features found</div>';
+    clearMarkersM();
+    return;
+  }
+
+  const typeEmoji = { lock: '🔒', winding: '🔄', water: '💧' };
+  const typeColor = { lock: '#ff6b6b', winding: '#f39c12', water: '#3498db' };
+  let html = '';
+  next5.forEach(function(f) {
+    const distAhead = f.cumulativeDistance - currentStartM.cumulativeDistance;
+    const eta = distAhead / speed;
+    const h = Math.floor(eta); const m = Math.round((eta - h) * 60);
+    const timeStr = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+    html += '<div class="mobile-feature-item" style="border-left-color:' + (typeColor[f.type] || '#007BFF') + '" ' +
+      'onclick="mapMobile.setView([' + f.latitude + ',' + f.longitude + '],15);scrollControlsToTop()">' +
+      '<span class="feature-emoji">' + (typeEmoji[f.type] || '📍') + '</span>' +
+      '<div class="feature-info">' +
+      '<div class="feature-name">' + f.name + '</div>' +
+      '<div class="feature-meta">' + distAhead.toFixed(1) + ' mi ahead · ETA: ' + timeStr + '</div>' +
+      '</div></div>';
+  });
+  resultDiv.innerHTML = html;
+
+  // Update mobile route summary if end is set
+  updateRouteM();
+
+  // Plot on map
+  clearMarkersM();
+  plotFeatureMarkers(next5, mapMobile, markersM);
+  const allCoords = next5.map(function(f) { return [f.latitude, f.longitude]; })
+    .concat([[currentStartM.latitude, currentStartM.longitude]]);
+  if (currentEndM) allCoords.push([currentEndM.latitude, currentEndM.longitude]);
+  polylineM = L.polyline(allCoords, { color: '#667eea', weight: 3, opacity: 0.7 }).addTo(mapMobile);
+  mapMobile.fitBounds(L.latLngBounds(allCoords), { padding: [20, 20] });
+}
+
+function clearMarkersM() {
+  markersM.forEach(function(m) { mapMobile.removeLayer(m); }); markersM = [];
+  if (polylineM) mapMobile.removeLayer(polylineM);
+}
+function resetMobile() {
+  ['startSearchM','endSearchM'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['startBadgeM','endBadgeM'].forEach(function(id) { document.getElementById(id).classList.remove('show'); });
+  document.getElementById('speedM').value = '3';
+  document.getElementById('speedLabelM').textContent = '3';
+  document.getElementById('speedValM').textContent = '3';
+  document.getElementById('mobileResults').innerHTML = '<div class="empty-state">Set start point &amp; calculate</div>';
+  document.getElementById('mobileRouteSummary').style.display = 'none';
+  currentStartM = null; currentEndM = null;
+  clearMarkersM();
+  if (startMarkerM) mapMobile.removeLayer(startMarkerM);
+  if (endMarkerM) mapMobile.removeLayer(endMarkerM);
+}
+
+function scrollControlsToTop() {
+  document.getElementById('controlsPane').scrollTop = 0;
+}
+
+/* ─── Shared helper: plot feature markers on any map ───────────── */
+function plotFeatureMarkers(features, targetMap, markerArray) {
+  const colors = { lock: '#ff6b6b', bridge: '#4ecdc4', marina: '#45b7d1', wharf: '#96ceb4', water: '#3498db', tunnel: '#95a5a6', junction: '#667eea', winding: '#f39c12' };
+  features.forEach(function(f) {
+    const mk = L.circleMarker([f.latitude, f.longitude], {
+      radius: 6, fillColor: colors[f.type] || '#007BFF', color: 'white', weight: 1, fillOpacity: 0.8
+    }).bindPopup(f.name).addTo(targetMap);
+    markerArray.push(mk);
+  });
+}
+
+window.onload = function() { initMap(); };
+</script>
+</body>
+</html>
