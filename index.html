@@ -1,34 +1,46 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <title>CanalPilot</title>
-</head>
-<body>
+<h1>CanalPilot</h1>
 
-  <h1>CanalPilot</h1>
-  <pre id="output"></pre>
+<label>
+  Start chainage:
+  <input id="start" type="number" value="0" />
+</label>
 
-  <script type="module">
-    import { getRouteSummary } from "./src/engine/routingEngine.js";
-    import { DEFAULT_CONFIG } from "./src/engine/config.js";
-    import { testCorridor } from "./src/data/testCorridor.js";
+<label style="margin-left: 12px;">
+  End chainage:
+  <input id="end" type="number" value="3200" />
+</label>
 
-    const config = {
-      ...DEFAULT_CONFIG,
-      maxChainage: testCorridor.length
-    };
+<button id="calc" style="margin-left: 12px;">Calculate</button>
+
+<pre id="output"></pre>
+
+<script type="module">
+  import { getRouteSummary } from "./src/engine/routingEngine.js";
+  import { DEFAULT_CONFIG } from "./src/engine/config.js";
+  import { testCorridor } from "./src/data/testCorridor.js";
+
+  const config = {
+    ...DEFAULT_CONFIG,
+    maxChainage: testCorridor.length
+  };
+
+  function render() {
+    const start = Number(document.getElementById("start").value);
+    const end = Number(document.getElementById("end").value);
 
     const summary = getRouteSummary(
-      0,
-      3200,
+      start,
+      end,
       testCorridor.features,
       config
     );
 
     document.getElementById("output").textContent =
       JSON.stringify(summary, null, 2);
-  </script>
+  }
 
-</body>
-</html>
+  document.getElementById("calc").addEventListener("click", render);
+
+  // run once on page load
+  render();
+</script>
