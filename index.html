@@ -12,101 +12,159 @@
             justify-content: center;
             align-items: center;
             background: linear-gradient(135deg, #667eea, #764ba2);
+            font-family: Arial, sans-serif;
         }
         .container {
             background: white;
             border-radius: 10px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            padding: 20px;
+            padding: 40px;
             width: 90%;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
+            max-width: 500px;
         }
         h1 {
             text-align: center;
             color: #333;
+            margin-top: 0;
         }
-        input, button {
-            margin: 10px 0;
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input {
+            width: 100%;
             padding: 10px;
-            border: 1px solid #ccc;
+            border: 1px solid #ddd;
             border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
         }
         button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
             background-color: #667eea;
             color: white;
             cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
         }
         button:hover {
             background-color: #764ba2;
         }
-        .output {
-            margin-top: 10px;
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            min-height: 50px;
+            display: none;
+        }
+        #output.show {
+            display: block;
         }
         .error {
-            color: red;
+            color: #d32f2f;
+            background-color: #ffebee !important;
         }
         .success {
-            color: green;
+            color: #388e3c;
+            background-color: #f1f8f4 !important;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>CanalPilot - Route Calculator</h1>
-        <input type="number" id="startChainage" placeholder="Start Chainage" />
-        <input type="number" id="endChainage" placeholder="End Chainage" />
-        <input type="number" id="lookAhead" placeholder="Look Ahead Hours" />
-        <input type="number" id="speed" placeholder="Speed" />
-        <button id="calculate">Calculate Route</button>
-        <button id="reset">Reset</button>
-        <div class="output" id="output"></div>
+        <h1>🚤 CanalPilot</h1>
+        
+        <div class="input-group">
+            <label for="startChainage">Start Chainage (m)</label>
+            <input type="number" id="startChainage" placeholder="0" value="0" />
+        </div>
+        
+        <div class="input-group">
+            <label for="endChainage">End Chainage (m)</label>
+            <input type="number" id="endChainage" placeholder="3200" value="3200" />
+        </div>
+        
+        <div class="input-group">
+            <label for="lookAheadHours">Look Ahead (hours)</label>
+            <input type="number" id="lookAheadHours" placeholder="1" value="1" step="0.5" />
+        </div>
+        
+        <div class="input-group">
+            <label for="speed">Speed (mph)</label>
+            <input type="number" id="speed" placeholder="3" value="3" step="0.5" />
+        </div>
+        
+        <div class="button-group">
+            <button onclick="calculateRoute()">Calculate Route</button>
+            <button onclick="resetFields()">Reset</button>
+        </div>
+        
+        <div id="output"></div>
     </div>
+    
     <script>
-        document.getElementById('calculate').onclick = function() {
+        function validateInputs(start, end, hours, speed) {
+            if (isNaN(start) || isNaN(end) || isNaN(hours) || isNaN(speed)) {
+                return { valid: false, message: 'Please enter valid numbers' };
+            }
+            if (hours <= 0 || speed <= 0) {
+                return { valid: false, message: 'Hours and speed must be greater than 0' };
+            }
+            if (start < 0 || start > 3200 || end < 0 || end > 3200) {
+                return { valid: false, message: 'Start and end must be between 0 and 3200' };
+            }
+            if (start === end) {
+                return { valid: false, message: 'Start and end chainage must be different' };
+            }
+            return { valid: true };
+        }
+        
+        function calculateRoute() {
             const start = parseFloat(document.getElementById('startChainage').value);
             const end = parseFloat(document.getElementById('endChainage').value);
-            const lookAhead = parseFloat(document.getElementById('lookAhead').value);
+            const hours = parseFloat(document.getElementById('lookAheadHours').value);
             const speed = parseFloat(document.getElementById('speed').value);
             const output = document.getElementById('output');
-            output.className = 'output'; // Reset output class
-            output.innerHTML = '';
             
-            // Validation Logic
-            if (isNaN(start) || isNaN(end) || isNaN(lookAhead) || isNaN(speed)) {
-                output.classList.add('error');
-                output.innerHTML = 'Please enter valid numbers.';
+            const validation = validateInputs(start, end, hours, speed);
+            
+            if (!validation.valid) {
+                output.classList.remove('success');
+                output.classList.add('error', 'show');
+                output.innerText = validation.message;
                 return;
             }
-            if (start < 0 || end < 0 || lookAhead < 0 || speed < 0) {
-                output.classList.add('error');
-                output.innerHTML = 'Values must be positive.';
-                return;
-            }
-            if (start < 0 || end > 3200) {
-                output.classList.add('error');
-                output.innerHTML = 'Values must be within bounds (0-3200).';
-                return;
-            }
-            if (start >= end) {
-                output.classList.add('error');
-                output.innerHTML = 'Start Chainage must be less than End Chainage.';
-                return;
-            }
-            // Calculate and output the route (Placeholder)
-            const result = `Calculating route from ${start} to ${end} at ${speed} speed for ${lookAhead} hours...`;
-            output.classList.add('success');
-            output.innerHTML = result;
-        };
-
-        document.getElementById('reset').onclick = function() {
-            document.getElementById('startChainage').value = '';
-            document.getElementById('endChainage').value = '';
-            document.getElementById('lookAhead').value = '';
-            document.getElementById('speed').value = '';
-            document.getElementById('output').innerHTML = '';
-        };
+            
+            const distance = Math.abs(end - start) * 0.000621371;
+            const eta = distance / speed;
+            const direction = start < end ? 'Forward' : 'Reverse';
+            
+            output.classList.remove('error');
+            output.classList.add('success', 'show');
+            output.innerText = `Direction: ${direction}\nDistance: ${distance.toFixed(2)} miles\nETA: ${eta.toFixed(2)} hours\n\nCalculating route...`;
+        }
+        
+        function resetFields() {
+            document.getElementById('startChainage').value = '0';
+            document.getElementById('endChainage').value = '3200';
+            document.getElementById('lookAheadHours').value = '1';
+            document.getElementById('speed').value = '3';
+            document.getElementById('output').classList.remove('show', 'error', 'success');
+        }
     </script>
 </body>
 </html>
