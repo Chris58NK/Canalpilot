@@ -1,273 +1,32 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CanalPilot - Route Calculator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            text-align: center;
-        }
-        
-        .controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        
-        .control-group {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        label {
-            font-weight: 600;
-            color: #555;
-            margin-bottom: 8px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        input {
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background: white;
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        input:hover {
-            border-color: #667eea;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 10px;
-            grid-column: 1 / -1;
-        }
-        
-        button {
-            flex: 1;
-            padding: 14px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        button:active {
-            transform: translateY(0);
-        }
-        
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        #output {
-            background: #f8f9fa;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 20px;
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.8;
-            color: #333;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            min-height: 300px;
-            overflow-y: auto;
-        }
-        
-        .error {
-            color: #d32f2f;
-            background: #ffebee;
-            border-color: #d32f2f;
-            padding: 16px;
-            border-radius: 6px;
-            margin-top: 20px;
-        }
-        
-        .success {
-            color: #388e3c;
-        }
-        
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 1.8em;
-            }
-            
-            .controls {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <title>Canalpilot</title>
 </head>
 <body>
-    <div class="container">
-        <h1>🚤 CanalPilot</h1>
-        
-        <div class="controls">
-            <div class="control-group">
-                <label for="start">Start Chainage (m)</label>
-                <input id="start" type="number" value="0" min="0">
-            </div>
-            
-            <div class="control-group">
-                <label for="end">End Chainage (m)</label>
-                <input id="end" type="number" value="3200" min="0">
-            </div>
-            
-            <div class="control-group">
-                <label for="hours">Look Ahead (hours)</label>
-                <input id="hours" type="number" value="1" step="0.5" min="0.5">
-            </div>
-            
-            <div class="control-group">
-                <label for="speed">Speed (mph)</label>
-                <input id="speed" type="number" value="3" step="0.5" min="0.5">
-            </div>
-            
-            <div class="button-group">
-                <button id="calc">Calculate Route</button>
-                <button id="reset">Reset</button>
-            </div>
-        </div>
-        
-        <pre id="output">Ready to calculate...</pre>
-    </div>
-
-    <script type="module">
-        import { getRouteSummary, getWindowFeatures } from "./src/engine/routingEngine.js";
-        import { DEFAULT_CONFIG } from "./src/engine/config.js";
-        import { testCorridor } from "./src/data/testCorridor.js";
-
-        const config = { ...DEFAULT_CONFIG, maxChainage: testCorridor.length };
-
-        function render() {
-            try {
-                const start = Number(document.getElementById("start").value);
-                const end = Number(document.getElementById("end").value);
-                const hours = Number(document.getElementById("hours").value);
-                const speed = Number(document.getElementById("speed").value);
-
-                // Validation
-                if (isNaN(start) || isNaN(end) || isNaN(hours) || isNaN(speed)) {
-                    showError("Please enter valid numbers");
-                    return;
-                }
-
-                if (start < 0 || end < 0 || hours < 0 || speed < 0) {
-                    showError("Values must be positive");
-                    return;
-                }
-
-                if (start >= end) {
-                    showError("Start chainage must be less than end chainage");
-                    return;
-                }
-
-                const summary = getRouteSummary(start, end, testCorridor.features, config);
-
-                const windowData = getWindowFeatures(
-                    start,
-                    summary.direction,
-                    hours,
-                    speed,
-                    testCorridor.features,
-                    config
-                );
-
-                const nextItems = windowData.items.length
-                    ? windowData.items.map(i => `- ${i.type}: ${i.name} @ ${i.chainage}m`).join("\n")
-                    : "None";
-
-                document.getElementById("output").textContent =
-`Direction: ${summary.direction}\n`
-+ `Distance: ${summary.distanceMiles.toFixed(2)} miles\n`
-+ `Locks: ${summary.lockCount}\n`
-+ `ETA: ${summary.etaHours.toFixed(2)} hours\n`
-+ `Next Feature: ${summary.nextFeature ? summary.nextFeature.name : "None"}\n\n`
-+ `Coming up in next ${hours}h @ ${speed}mph:\n${nextItems}`;
-            } catch (error) {
-                showError(`Error: ${error.message}`);
-                console.error("Render error:", error);
+    <script>
+        function validateInputs(hours, speed, start, end, max) {
+            if (isNaN(hours) || isNaN(speed) || isNaN(start) || isNaN(end)) {
+                return false; // Ensure inputs are numbers
             }
+            if (hours <= 0 || speed <= 0) {
+                return false; // Both hours and speed must be greater than 0
+            }
+            if (start < 0 || end < 0 || start > max || end > max) {
+                return false; // Start and end must be within bounds
+            }
+            if (start === end) {
+                return false; // Start and end must be different
+            }
+            return true; // All validations passed
         }
 
-        function showError(message) {
-            document.getElementById("output").textContent = message;
-            document.getElementById("output").className = "error";
-        }
-
-        function reset() {
-            document.getElementById("start").value = "0";
-            document.getElementById("end").value = "3200";
-            document.getElementById("hours").value = "1";
-            document.getElementById("speed").value = "3";
-            document.getElementById("output").textContent = "Ready to calculate...";
-            document.getElementById("output").className = "";
-        }
-
-        // Set up event listeners
-        document.getElementById("calc").addEventListener("click", render);
-        document.getElementById("reset").addEventListener("click", reset);
-        
-        // Initial render
-        render();
+        // Example usage
+        const max = 100;
+        const hours = 2;
+        const speed = 20;
+        const start = 10;
+        const end = 20;
+        console.log(validateInputs(hours, speed, start, end, max));
     </script>
 </body>
 </html>
