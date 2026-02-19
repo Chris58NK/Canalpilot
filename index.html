@@ -3,84 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lookahead Calculation Engine</title>
+    <title>Lookahead Distance Calculator</title>
     <style>
         body {
+            background: linear-gradient(to right, #74ebd5, #acb6e5);
             font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             padding: 20px;
         }
-        .controls {
-            width: 30%;
-            padding-right: 20px;
+        .panel {
+            padding: 20px;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        .results {
-            width: 65%;
-            border-left: 1px solid #ccc;
-            padding-left: 20px;
+        .input-group {
+            margin-bottom: 15px;
         }
         .feature {
             padding: 10px;
             margin: 5px 0;
             border-radius: 5px;
         }
-        .lock { background-color: #ff9999; }
-        .bridge { background-color: #99ccff; }
-        .marina { background-color: #ccffcc; }
-        .wharf { background-color: #ffff99; }
-        .water { background-color: #99ffff; }
-        .tunnel { background-color: #ffcc99; }
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .controls, .results {
-                width: 100%;
-                border-left: none;
-                padding-left: 0;
-            }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 12px;
+            color: white;
+        }
+        .red { background-color: red; }
+        .teal { background-color: teal; }
+        .blue { background-color: blue; }
+        .green { background-color: green; }
+        .lightblue { background-color: lightblue; }
+        .gray { background-color: gray; }
+        .purple { background-color: purple; }
+        .orange { background-color: orange; }
+        .darkred { background-color: darkred; }
+        .darkpurple { background-color: darkpurple; }
+        .pink { background-color: pink; }
+        .cyan { background-color: cyan; }
+        .button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button:hover {
+            opacity: 0.8;
+        }
+        .scroll {
+            max-height: 300px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        .scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .scroll::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="controls">
-        <h2>Input Controls</h2>
-        <label for="speed">Speed (km/h): </label>
-        <input type="number" id="speed" name="speed"><br><br>
-        <label for="hours">Hours: </label>
-        <input type="number" id="hours" name="hours"><br><br>
-        <button id="calculate">Calculate</button><br><br>
+    <div class="container">
+        <div class="panel">
+            <h2>Input</h2>
+            <div class="input-group">
+                <label for="speed">Speed (mph):</label>
+                <input type="number" id="speed">
+            </div>
+            <div class="input-group">
+                <label for="lookahead">Lookahead (hours):</label>
+                <input type="number" id="lookahead">
+            </div>
+            <button class="button" id="calculate">Calculate</button>
+            <button class="button" id="reset">Reset</button>
+        </div>
+        <div class="panel">
+            <h2>Results</h2>
+            <div id="results" class="scroll"></div>
+            <div id="stats"></div>
+        </div>
     </div>
-    <div class="results">
-        <h2>Upcoming Canal Features</h2>
-        <div id="features"></div>
-        <div id="summary"></div>
-    </div>
-
     <script src="testCorridor.js"></script>
     <script>
         document.getElementById('calculate').onclick = function() {
             const speed = parseFloat(document.getElementById('speed').value);
-            const hours = parseFloat(document.getElementById('hours').value);
-            const featuresContainer = document.getElementById('features');
-            featuresContainer.innerHTML = '';
-            let summary = { locks: 0, bridges: 0, marinas: 0, wharfs: 0, water: 0, tunnels: 0 };
-
-            const distance = speed * hours;
-            const upcomingFeatures = data.filter(feature => feature.distance <= distance);
-
-            upcomingFeatures.forEach(feature => {
-                const featureDiv = document.createElement('div');
-                featureDiv.className = `feature ${feature.type}`;
-                featureDiv.innerHTML = `<strong>${feature.name}</strong> - Distance: ${feature.distance} km, ETA: ${feature.eta} hrs, Chainage: ${feature.chainage}, Lock Counts: ${feature.lockCounts}`;
-                featuresContainer.appendChild(featureDiv);
-                summary[feature.type]++;
+            const lookahead = parseFloat(document.getElementById('lookahead').value);
+            const lookaheadDistance = speed * lookahead;
+            const filteredFeatures = data.filter(feature => feature.distance <= lookaheadDistance);
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = '';
+            filteredFeatures.sort((a, b) => a.distance - b.distance);
+            filteredFeatures.forEach(feature => {
+                const badgeClass = feature.type.toLowerCase();
+                const featureElement = document.createElement('div');
+                featureElement.className = `feature ${badgeClass}`;
+                featureElement.innerHTML = `<span class='badge ${badgeClass}'>${feature.type}</span> ${feature.name} - ${feature.distance.toFixed(2)} miles - ETA: ${feature.eta.toFixed(2)} hours - Chainage: ${feature.chainage} m - Locks: ${feature.lockCount}`;
+                resultsContainer.appendChild(featureElement);
             });
-
-            document.getElementById('summary').innerHTML = `<strong>Summary:</strong> Locks: ${summary.locks}, Bridges: ${summary.bridges}, Marinas: ${summary.marinas}, Wharfs: ${summary.wharfs}, Water: ${summary.water}, Tunnels: ${summary.tunnels}`;
+            const totalFeatures = filteredFeatures.length;
+            const locksAhead = filteredFeatures.filter(f => f.type === 'Lock').length;
+            const bridgesAhead = filteredFeatures.filter(f => f.type === 'Bridge').length;
+            const marinasAhead = filteredFeatures.filter(f => f.type === 'Marina').length;
+            const stats = `Total features ahead: ${totalFeatures}, Locks ahead: ${locksAhead}, Bridges ahead: ${bridgesAhead}, Marinas ahead: ${marinasAhead}`;
+            document.getElementById('stats').innerText = stats;
+        };
+        document.getElementById('reset').onclick = function() {
+            document.getElementById('speed').value = '';
+            document.getElementById('lookahead').value = '';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('stats').innerText = '';
         };
     </script>
 </body>
