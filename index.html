@@ -26,34 +26,49 @@
 
 <script type="module">
   
-import { calculateRoute, featuresWithinHours } from "./engine.js";
+ <script type="module">
+  import { getRouteSummary, getWindowFeatures } from "./src/engine/routingEngine.js";
+  import { DEFAULT_CONFIG } from "./src/engine/config.js";
+  import { testCorridor } from "./src/data/testCorridor.js";
 
-function render() {
-  const start = Number(document.getElementById("start").value);
-  const end = Number(document.getElementById("end").value);
-  const hours = Number(document.getElementById("hours").value);
-  const speed = Number(document.getElementById("speed").value);
+  const config = { ...DEFAULT_CONFIG, maxChainage: testCorridor.length };
 
-  const summary = calculateRoute(start, end);
-  const windowData = featuresWithinHours(start, end, hours, speed);
+  function render() {
+    const start = Number(document.getElementById("start").value);
+    const end = Number(document.getElementById("end").value);
+    const hours = Number(document.getElementById("hours").value);
+    const speed = Number(document.getElementById("speed").value);
 
-  const nextItems = windowData.items.length
-    ? windowData.items.map(i => `- ${i.type}: ${i.name} @ ${i.chainage}m`).join("\n")
-    : "None";
+    const summary = getRouteSummary(start, end, testCorridor.features, config);
 
-  document.getElementById("output").textContent =
+    const windowData = getWindowFeatures(
+      start,
+      summary.direction,
+      hours,
+      speed,
+      testCorridor.features,
+      config
+    );
+
+    const nextItems = windowData.items.length
+      ? windowData.items.map(i => `- ${i.type}: ${i.name} @ ${i.chainage}m`).join("\n")
+      : "None";
+
+    document.getElementById("output").textContent =
 `Direction: ${summary.direction}
-Distance: ${summary.distanceMiles} miles
+Distance: ${summary.distanceMiles.toFixed(2)} miles
 Locks: ${summary.lockCount}
-ETA: ${summary.etaHours} hours
+ETA: ${summary.etaHours.toFixed(2)} hours
 Next Feature: ${summary.nextFeature ? summary.nextFeature.name : "None"}
 
 Coming up in next ${hours}h @ ${speed}mph:
 ${nextItems}
 `;
-}
+  }
 
-document.getElementById("calc").addEventListener("click", render);
+  document.getElementById("calc").addEventListener("click", render);
+  render();
+</script>
 render();
   // run once on page load
   render();
