@@ -3,66 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canalpilot</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="./src/engine/routingEngine.js"></script>
-    <script src="./src/engine/config.js"></script>
-    <script src="./src/data/testCorridor.js"></script>
+    <title>Route Calculator</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        .error { color: red; }
-        .success { color: green; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #800080, #e10098);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        input {
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #333;
+            border-radius: 5px;
+            min-height: 50px;
+        }
     </style>
 </head>
 <body>
-    <h1>Canalpilot</h1>
-    <form id="calcForm">
-        <label for="startChainage">Start Chainage:</label>
-        <input type="number" id="startChainage" required>
-        <br>
-        <label for="endChainage">End Chainage:</label>
-        <input type="number" id="endChainage" required>
-        <br>
-        <label for="hours">Hours:</label>
-        <input type="number" id="hours" required>
-        <br>
-        <label for="speed">Speed:</label>
-        <input type="number" id="speed" required>
-        <br>
-        <button type="button" onclick="calculate()">Calculate</button>
-        <button type="reset">Reset</button>
-    </form>
-    <div id="result"></div>
+    <h1>Route Calculator</h1>
+    <input type="number" id="startChainage" placeholder="Start Chainage">
+    <input type="number" id="endChainage" placeholder="End Chainage">
+    <input type="number" id="lookAheadHours" placeholder="Look Ahead Hours">
+    <input type="number" id="speed" placeholder="Speed">
+    <br>
+    <button onclick="calculateRoute()">Calculate Route</button>
+    <button onclick="resetFields()">Reset</button>
+    <div id="output"></div>
+    <script src="routingEngine.js"></script>
+    <script src="config.js"></script>
+    <script src="testCorridor.js"></script>
     <script>
-        function calculate() {
-            const start = parseFloat(document.getElementById('startChainage').value);
-            const end = parseFloat(document.getElementById('endChainage').value);
-            const hours = parseFloat(document.getElementById('hours').value);
-            const speed = parseFloat(document.getElementById('speed').value);
-            const resultDiv = document.getElementById('result');
-
-            // Validation
-            if (isNaN(start) || isNaN(end) || isNaN(hours) || isNaN(speed)) {
-                resultDiv.innerHTML = "<p class='error'>Invalid input: Please enter valid numbers.</p>";
-                return;
-            } 
-            if (hours <= 0 || speed <= 0) {
-                resultDiv.innerHTML = "<p class='error'>Error: Hours and Speed must be positive.</p>";
-                return;
+        function validateInputs(start, end, hours, speed) {
+            if (start < 0 || end < 0 || hours <= 0 || speed <= 0) {
+                return false;
             }
-            if (start < 0 || end < 0 || start > maxCorridorLength || end > maxCorridorLength) {
-                resultDiv.innerHTML = "<p class='error'>Error: Chainage must be between 0 and the maximum corridor length.</p>";
-                return;
+            if (start >= 3200 || end >= 3200) {
+                return false;
             }
-            if (start >= end) {
-                resultDiv.innerHTML = "<p class='error'>Error: Start Chainage must be less than End Chainage.</p>";
-                return;
+            if (start === end) {
+                return false;
             }
-
-            // Success
-            resultDiv.innerHTML = "<p class='success'>Calculation successful!</p>";
-            // Include further calculations as needed...
+            return true;
         }
-    <\/script>
+        function calculateRoute() {
+            const start = parseInt(document.getElementById('startChainage').value);
+            const end = parseInt(document.getElementById('endChainage').value);
+            const hours = parseInt(document.getElementById('lookAheadHours').value);
+            const speed = parseInt(document.getElementById('speed').value);
+            if (!validateInputs(start, end, hours, speed)) {
+                document.getElementById('output').innerText = 'Invalid input values. Please check the constraints.';
+                return;
+            }
+            // Route calculation logic here
+            document.getElementById('output').innerText = `Calculating route from ${start} to ${end} at speed ${speed}...`;
+            // Call the routing function from a module here, e.g., RouteEngine.calculate(start, end, hours, speed);
+        }
+        function resetFields() {
+            document.getElementById('startChainage').value = '';
+            document.getElementById('endChainage').value = '';
+            document.getElementById('lookAheadHours').value = '';
+            document.getElementById('speed').value = '';
+            document.getElementById('output').innerText = '';
+        }
+    </script>
 </body>
 </html>
