@@ -1,37 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>CanalPilot Engine Test</title>
+  <meta charset="UTF-8" />
+  <title>CanalPilot</title>
 </head>
 <body>
-  <h2>CanalPilot – Routing Engine Proof</h2>
+
+  <h1>CanalPilot</h1>
   <pre id="output"></pre>
 
   <script type="module">
-    import { calculateRoute, featuresWithinHours } from "./engine.js";
+    import { getRouteSummary } from "./src/engine/routingEngine.js";
+    import { DEFAULT_CONFIG } from "./src/engine/config.js";
+    import { testCorridor } from "./src/data/testCorridor.js";
 
-    const out = document.getElementById("output");
+    const config = {
+      ...DEFAULT_CONFIG,
+      maxChainage: testCorridor.length
+    };
 
-    const speedMph = 3;
-    const minutesPerLock = 8;
-    const windowHours = 1;
+    const summary = getRouteSummary(
+      0,
+      3200,
+      testCorridor.features,
+      config
+    );
 
-    const northboundResult = calculateRoute(0, 3200, speedMph, minutesPerLock);
-    const southboundResult = calculateRoute(3200, 0, speedMph, minutesPerLock);
-
-    const northWindow = featuresWithinHours(0, 3200, windowHours, speedMph);
-    const southWindow = featuresWithinHours(3200, 0, windowHours, speedMph);
-
-    out.textContent =
-      "Northbound route:\n" +
-      JSON.stringify(northboundResult, null, 2) +
-      "\n\nSouthbound route:\n" +
-      JSON.stringify(southboundResult, null, 2) +
-      `\n\nFeatures within next ${windowHours} hour(s) at ${speedMph} mph (Northbound):\n` +
-      JSON.stringify(northWindow, null, 2) +
-      `\n\nFeatures within next ${windowHours} hour(s) at ${speedMph} mph (Southbound):\n` +
-      JSON.stringify(southWindow, null, 2);
+    document.getElementById("output").textContent =
+      JSON.stringify(summary, null, 2);
   </script>
+
 </body>
 </html>
