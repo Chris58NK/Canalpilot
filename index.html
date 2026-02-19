@@ -3,167 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CanalPilot - Route Calculator</title>
+    <title>Canal Pilot - Lookahead Calculation</title>
     <style>
-        body {
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            padding: 40px;
-            width: 90%;
-            max-width: 500px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-top: 0;
-        }
-        .input-group {
-            margin: 15px 0;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            background-color: #667eea;
-            color: white;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        button:hover {
-            background-color: #764ba2;
-        }
-        #output {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
-            min-height: 50px;
-            display: none;
-        }
-        #output.show {
-            display: block;
-        }
-        .error {
-            color: #d32f2f;
-            background-color: #ffebee !important;
-        }
-        .success {
-            color: #388e3c;
-            background-color: #f1f8f4 !important;
-        }
+        body { font-family: Arial, sans-serif; }
+        .container { display: flex; }
+        .input-controls { width: 30%; padding: 20px; }
+        .results { width: 70%; padding: 20px; }
+        .badge { padding: 5px; border-radius: 5px; color: white; }
+        .lock { background-color: red; }
+        .bridge { background-color: teal; }
+        .marina { background-color: blue; }
+        .wharf { background-color: green; }
+        .water { background-color: lightblue; }
+        .tunnel { background-color: gray; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚤 CanalPilot</h1>
-        
-        <div class="input-group">
-            <label for="startChainage">Start Chainage (m)</label>
-            <input type="number" id="startChainage" placeholder="0" value="0" />
+        <div class="input-controls">
+            <h2>Input Controls</h2>
+            <label for="speed">Speed (km/h):</label>
+            <input type="number" id="speed" placeholder="Enter speed"><br><br>
+            <label for="lookahead">Lookahead (hours):</label>
+            <input type="number" id="lookahead" placeholder="Enter lookahead hours"><br><br>
+            <button onclick="calculateLookahead()">Calculate</button>
         </div>
-        
-        <div class="input-group">
-            <label for="endChainage">End Chainage (m)</label>
-            <input type="number" id="endChainage" placeholder="3200" value="3200" />
+        <div class="results">
+            <h2>Upcoming Canal Features</h2>
+            <div id="featureList"></div>
+            <div id="stats">
+                <h3>Statistics</h3>
+                <p>Total Features Ahead: <span id="totalFeatures">0</span></p>
+                <p>Distance Range: <span id="distanceRange">0 km</span></p>
+                <p>Locks Ahead: <span id="locksAhead">0</span></p>
+            </div>
         </div>
-        
-        <div class="input-group">
-            <label for="lookAheadHours">Look Ahead (hours)</label>
-            <input type="number" id="lookAheadHours" placeholder="1" value="1" step="0.5" />
-        </div>
-        
-        <div class="input-group">
-            <label for="speed">Speed (mph)</label>
-            <input type="number" id="speed" placeholder="3" value="3" step="0.5" />
-        </div>
-        
-        <div class="button-group">
-            <button onclick="calculateRoute()">Calculate Route</button>
-            <button onclick="resetFields()">Reset</button>
-        </div>
-        
-        <div id="output"></div>
     </div>
-    
+
+    <script src="testCorridor.js"></script>
     <script>
-        function validateInputs(start, end, hours, speed) {
-            if (isNaN(start) || isNaN(end) || isNaN(hours) || isNaN(speed)) {
-                return { valid: false, message: 'Please enter valid numbers' };
-            }
-            if (hours <= 0 || speed <= 0) {
-                return { valid: false, message: 'Hours and speed must be greater than 0' };
-            }
-            if (start < 0 || start > 3200 || end < 0 || end > 3200) {
-                return { valid: false, message: 'Start and end must be between 0 and 3200' };
-            }
-            if (start === end) {
-                return { valid: false, message: 'Start and end chainage must be different' };
-            }
-            return { valid: true };
-        }
-        
-        function calculateRoute() {
-            const start = parseFloat(document.getElementById('startChainage').value);
-            const end = parseFloat(document.getElementById('endChainage').value);
-            const hours = parseFloat(document.getElementById('lookAheadHours').value);
-            const speed = parseFloat(document.getElementById('speed').value);
-            const output = document.getElementById('output');
-            
-            const validation = validateInputs(start, end, hours, speed);
-            
-            if (!validation.valid) {
-                output.classList.remove('success');
-                output.classList.add('error', 'show');
-                output.innerText = validation.message;
-                return;
-            }
-            
-            const distance = Math.abs(end - start) * 0.000621371;
-            const eta = distance / speed;
-            const direction = start < end ? 'Forward' : 'Reverse';
-            
-            output.classList.remove('error');
-            output.classList.add('success', 'show');
-            output.innerText = `Direction: ${direction}\nDistance: ${distance.toFixed(2)} miles\nETA: ${eta.toFixed(2)} hours\n\nCalculating route...`;
-        }
-        
-        function resetFields() {
-            document.getElementById('startChainage').value = '0';
-            document.getElementById('endChainage').value = '3200';
-            document.getElementById('lookAheadHours').value = '1';
-            document.getElementById('speed').value = '3';
-            document.getElementById('output').classList.remove('show', 'error', 'success');
+        function calculateLookahead() {
+            const speed = document.getElementById('speed').value;
+            const lookaheadHours = document.getElementById('lookahead').value;
+            const lookaheadDistance = speed * lookaheadHours;
+
+            const features = []; // Load your features data from the testCorridor
+            // Assuming features data has `type`, `distance`, `ETA`, `chainage`, `locks` properties
+
+            const upcomingFeatures = features.filter(feature => feature.distance <= lookaheadDistance);
+            upcomingFeatures.sort((a, b) => a.distance - b.distance);
+            const featureList = document.getElementById('featureList');
+            featureList.innerHTML = '';
+
+            upcomingFeatures.forEach(feature => {
+                const featureDiv = document.createElement('div');
+                featureDiv.innerHTML = `<span class='badge ${feature.type}'>${feature.type}</span> ` +
+                    `Distance: ${feature.distance} km, ETA: ${feature.ETA}, Chainage: ${feature.chainage}, Locks: ${feature.locks}`;
+                featureList.appendChild(featureDiv);
+            });
+
+            // Update statistics
+            document.getElementById('totalFeatures').innerText = upcomingFeatures.length;
+            document.getElementById('distanceRange').innerText = lookaheadDistance + ' km';
+            const locksCount = upcomingFeatures.reduce((count, feature) => count + feature.locks, 0);
+            document.getElementById('locksAhead').innerText = locksCount;
         }
     </script>
 </body>
