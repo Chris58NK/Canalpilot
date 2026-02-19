@@ -3,88 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Route Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+    <title>Canalpilot</title>
     <style>
         body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(to right, #6a11cb, #2575fc);
             font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #800080, #e10098);
-            color: white;
-            padding: 20px;
-            text-align: center;
         }
-        input {
-            margin: 10px;
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        .input {
+            width: 100%;
             padding: 10px;
+            margin: 10px 0;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
-        button {
-            margin: 10px;
-            padding: 10px 15px;
+        .button {
+            width: 100%;
+            padding: 10px;
             border: none;
             border-radius: 5px;
-            background-color: #4CAF50;
-            color: white;
+            background: #2575fc;
+            color: #fff;
             cursor: pointer;
+            transition: background 0.3s;
         }
-        button:hover {
-            background-color: #45a049;
-        }
-        #output {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #333;
-            border-radius: 5px;
-            min-height: 50px;
+        .button:hover {
+            background: #6a11cb;
         }
     </style>
 </head>
 <body>
-    <h1>Route Calculator</h1>
-    <input type="number" id="startChainage" placeholder="Start Chainage">
-    <input type="number" id="endChainage" placeholder="End Chainage">
-    <input type="number" id="lookAheadHours" placeholder="Look Ahead Hours">
-    <input type="number" id="speed" placeholder="Speed">
-    <br>
-    <button onclick="calculateRoute()">Calculate Route</button>
-    <button onclick="resetFields()">Reset</button>
-    <div id="output"></div>
-    <script src="routingEngine.js"></script>
-    <script src="config.js"></script>
-    <script src="testCorridor.js"></script>
+    <div class="card">
+        <h2>Welcome to Canalpilot</h2>
+        <form id="mainForm">
+            <input type="text" class="input" placeholder="Enter text" required />
+            <input type="email" class="input" placeholder="Enter email" required />
+            <button type="submit" class="button">Submit</button>
+        </form>
+    </div>
     <script>
-        function validateInputs(start, end, hours, speed) {
-            if (start < 0 || end < 0 || hours <= 0 || speed <= 0) {
-                return false;
+        document.getElementById('mainForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            // Form validation logic
+            var inputs = this.getElementsByTagName('input');
+            var isValid = true;
+            for (var i = 0; i < inputs.length; i++) {
+                if (!inputs[i].value) {
+                    isValid = false;
+                    break;
+                }
             }
-            if (start >= 3200 || end >= 3200) {
-                return false;
+            if (isValid) {
+                alert('Form Submitted!');
+            } else {
+                alert('Please fill all fields.');
             }
-            if (start === end) {
-                return false;
-            }
-            return true;
-        }
-        function calculateRoute() {
-            const start = parseInt(document.getElementById('startChainage').value);
-            const end = parseInt(document.getElementById('endChainage').value);
-            const hours = parseInt(document.getElementById('lookAheadHours').value);
-            const speed = parseInt(document.getElementById('speed').value);
-            if (!validateInputs(start, end, hours, speed)) {
-                document.getElementById('output').innerText = 'Invalid input values. Please check the constraints.';
-                return;
-            }
-            // Route calculation logic here
-            document.getElementById('output').innerText = `Calculating route from ${start} to ${end} at speed ${speed}...`;
-            // Call the routing function from a module here, e.g., RouteEngine.calculate(start, end, hours, speed);
-        }
-        function resetFields() {
-            document.getElementById('startChainage').value = '';
-            document.getElementById('endChainage').value = '';
-            document.getElementById('lookAheadHours').value = '';
-            document.getElementById('speed').value = '';
-            document.getElementById('output').innerText = '';
-        }
+        });
     </script>
 </body>
 </html>
