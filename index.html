@@ -3,56 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CanalPilot Application</title>
+    <link rel="stylesheet" href="style.css">
+    <title>CanalPilot</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <style>
-        #map {
-            height: 500px;
-        }
-    </style>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-    <h1>CanalPilot Application</h1>
-    <div>
-        <input type="text" id="searchBox" placeholder="Search for a location..." />
-        <button id="searchButton">Search</button>
-    </div>
-    <div id="map"></div>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <div id="map" style="height: 600px;"></div>
     <script>
         // Initialize the map
         var map = L.map('map').setView([51.505, -0.09], 13);
-
-        // Add OpenStreetMap tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18,
-            attribution: '© OpenStreetMap contributors'
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // Search functionality
-        document.getElementById('searchButton').addEventListener('click', function() {
-            var query = document.getElementById('searchBox').value;
-            // Make an API call or a function to search for a location
-            searchLocation(query);
-        });
-
-        function searchLocation(query) {
-            // Example search logic (to be replaced with actual search)
-            var lat = 51.505; // Example latitude
-            var lon = -0.09; // Example longitude
-            map.setView([lat, lon], 13);
-            L.marker([lat, lon]).addTo(map).bindPopup('You searched for: ' + query);
-        }
-
-        // Route calculator (mock example)
+        // Route calculation and search functions here
+        // Example: 
         function calculateRoute(start, end) {
-            var distance = Math.abs(end - start); // Ensure positive distance
-            alert('Calculated distance: ' + distance + ' units');
+            // Route calculation logic
         }
 
-        // Example of route calculation (to be replaced with actual route logic)
-        calculateRoute(5, -3);
-        
+        // Search functionality
+        function searchFeature(query) {
+            // Search logic here
+        }
+
+        // Other features and functionalities
     </script>
 </body>
 </html>
