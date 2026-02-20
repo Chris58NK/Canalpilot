@@ -4,48 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canal Pilot</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="map"></div>
-    <div id="stats">
-        <div class="stat-box">
-            <h3>Distance</h3>
-            <p id="distance">0 km</p>
-        </div>
-        <div class="stat-box">
-            <h3>Duration</h3>
-            <p id="duration">0 hrs</p>
-        </div>
-        <div class="stat-box">
-            <h3>Locks</h3>
-            <p id="locks">0</p>
-        </div>
-        <div class="stat-box">
-            <h3>Bridges</h3>
-            <p id="bridges">0</p>
-        </div>
-        <div class="stat-box">
-            <h3>Marinas</h3>
-            <p id="marinas">0</p>
-        </div>
-    </div>
+    <header>
+        <h1>Welcome to the Canal Pilot</h1>
+    </header>
+    <main>
+        <section id="map-container">
+            <div id="map"></div>
+        </section>
+        <section id="search-container">
+            <input type="text" id="search-box" placeholder="Search...">
+            <button id="search-button">Search</button>
+        </section>
+        <section id="calculations-container">
+            <h2>Calculations</h2>
+            <div id="calculations-output"></div>
+        </section>
+    </main>
     <script src="script.js"></script>
-    <script>
-        // Click-to-select functionality for Start/End points
-        const map = document.getElementById('map');
-        map.addEventListener('click', function(event) {
-            const featureType = getFeatureAtClick(event); // Assume this function returns feature type
-            if (featureType) {
-                const pointType = confirm('Is this the Start point? (Cancel for End point)') ? 'Start' : 'End';
-                document.getElementById(pointType.toLowerCase()).innerText = featureType;
-            }
-        });
-
-        function getFeatureAtClick(event) {
-            // Logic to determine feature at clicked location
-            // This should return a feature name or type based on the click
-        }
-    </script>
 </body>
 </html>
