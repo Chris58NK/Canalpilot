@@ -1,9 +1,9 @@
 const testCorridor = {
   corridor: "Leicester Section - Grand Union Canal",
   startPoint: "Norton Junction",
-  endPoint: "Foxton Junction",
-  totalDistanceMiles: 23.1,
-  totalDistanceMeters: 37157,
+  endPoint: "Belgrave Lock",
+  totalDistanceMiles: 43.15,
+  totalDistanceMeters: 69443,
   features: [
     { id: 1, name: "Norton Junction", cumulativeDistance: 0, chainage: 0, linkLocks: 0, latitude: 52.28586603, longitude: -1.118194073, type: "junction", description: "Start of Leicester Line" },
     { id: 2, name: "Norton Junction Bridge No 1", cumulativeDistance: 0.03, chainage: 46, linkLocks: 0, latitude: 52.28611165, longitude: -1.118750721, type: "bridge", description: "" },
@@ -108,7 +108,28 @@ const testCorridor = {
     { id: 101, name: "Inclined Plane Upper Access Arm Junction", cumulativeDistance: 22.81, chainage: 176, linkLocks: 0, latitude: 52.49731906, longitude: -0.9836, type: "junction", description: "" },
     { id: 102, name: "Foxton Top Staircase", cumulativeDistance: 22.95, chainage: 223, linkLocks: 0, latitude: 52.49927023, longitude: -0.9831, type: "lock", description: "10-lock staircase" },
     { id: 103, name: "Foxton Bottom Staircase", cumulativeDistance: 23.05, chainage: 154, linkLocks: 5, latitude: 52.5006467, longitude: -0.9828, type: "lock", description: "10-lock staircase" },
-    { id: 104, name: "Foxton Junction", cumulativeDistance: 23.1, chainage: 93, linkLocks: 5, latitude: 52.50147289, longitude: -0.9826, type: "junction", description: "End of Leicester Line" }
+    { id: 104, name: "Foxton Junction", cumulativeDistance: 23.1, chainage: 93, linkLocks: 5, latitude: 52.50147289, longitude: -0.9826, type: "junction", description: "Junction - Leicester Line continues north" },
+    { id: 105, name: "Gumley Bridge No 69", cumulativeDistance: 25.4, chainage: 3701, linkLocks: 0, latitude: 52.51761313, longitude: -0.99147, type: "bridge", description: "" },
+    { id: 106, name: "Long Hill Bridge No 70", cumulativeDistance: 25.63, chainage: 370, linkLocks: 0, latitude: 52.51960538, longitude: -1.002856244, type: "bridge", description: "" },
+    { id: 107, name: "Saddington Tunnel (southeastern entrance)", cumulativeDistance: 26.83, chainage: 1931, linkLocks: 0, latitude: 52.52796151, longitude: -1.0221228, type: "tunnel", description: "" },
+    { id: 108, name: "Saddington Tunnel (northwestern entrance)", cumulativeDistance: 27.33, chainage: 805, linkLocks: 0, latitude: 52.53313233, longitude: -1.03046447, type: "tunnel", description: "" },
+    { id: 109, name: "Fleckney Bridge No 73", cumulativeDistance: 27.63, chainage: 483, linkLocks: 0, latitude: 52.53662295, longitude: -1.034347773, type: "bridge", description: "" },
+    { id: 110, name: "Kibworth Second Lock Pipe Bridge", cumulativeDistance: 28.42, chainage: 1271, linkLocks: 1, latitude: 52.5458031, longitude: -1.027273983, type: "bridge", description: "" },
+    { id: 111, name: "Kibworth Second Lock No 19", cumulativeDistance: 28.44, chainage: 32, linkLocks: 0, latitude: 52.5459793, longitude: -1.026915237, type: "lock", description: "" },
+    { id: 112, name: "Taylor's Turnover Lock No 20", cumulativeDistance: 28.54, chainage: 145, linkLocks: 1, latitude: 52.54699485, longitude: -1.025606379, type: "lock", description: "" },
+    { id: 113, name: "Kibworth Bridge No 75", cumulativeDistance: 28.55, chainage: 32, linkLocks: 1, latitude: 52.54721468, longitude: -1.025471538, type: "bridge", description: "" },
+    { id: 114, name: "Pywells Lock No 21", cumulativeDistance: 28.66, chainage: 177, linkLocks: 0, latitude: 52.5486833, longitude: -1.025336146, type: "lock", description: "" },
+    { id: 115, name: "Pywells Lock Aqueduct", cumulativeDistance: 28.73, chainage: 113, linkLocks: 1, latitude: 52.54955126, longitude: -1.025860459, type: "aqueduct", description: "" },
+    { id: 116, name: "Newton Church Bridge No 80", cumulativeDistance: 30.65, chainage: 3090, linkLocks: 1, latitude: 52.5648831, longitude: -1.058107316, type: "bridge", description: "" },
+    { id: 117, name: "Kilby Bridge No 87", cumulativeDistance: 32.89, chainage: 3605, linkLocks: 7, latitude: 52.56712324, longitude: -1.101498709, type: "bridge", description: "" },
+    { id: 118, name: "Blaby Bridge No 98", cumulativeDistance: 36.02, chainage: 5037, linkLocks: 5, latitude: 52.58238537, longitude: -1.162952185, type: "bridge", description: "" },
+    { id: 119, name: "Packhorse Bridge No 105", cumulativeDistance: 38.49, chainage: 3975, linkLocks: 4, latitude: 52.60307743, longitude: -1.162482619, type: "bridge", description: "" },
+    { id: 120, name: "River Soar Junction", cumulativeDistance: 38.5, chainage: 16, linkLocks: 0, latitude: 52.60323324, longitude: -1.162359416, type: "junction", description: "" },
+    { id: 121, name: "Leicester Visitor Moorings", cumulativeDistance: 41.0, chainage: 4023, linkLocks: 3, latitude: 52.63195164, longitude: -1.142143614, type: "mooring", description: "" },
+    { id: 122, name: "Soar Lane Bridge No 3", cumulativeDistance: 41.52, chainage: 821, linkLocks: 0, latitude: 52.63844387, longitude: -1.14423871, type: "bridge", description: "" },
+    { id: 123, name: "North Lock No 42", cumulativeDistance: 41.76, chainage: 402, linkLocks: 0, latitude: 52.64093298, longitude: -1.143229902, type: "lock", description: "" },
+    { id: 124, name: "Memory Lane Wharf", cumulativeDistance: 42.4, chainage: 1030, linkLocks: 1, latitude: 52.6449806, longitude: -1.130433083, type: "wharf", description: "" },
+    { id: 125, name: "Belgrave Lock No 44", cumulativeDistance: 43.15, chainage: 1207, linkLocks: 1, latitude: 52.65411281, longitude: -1.128185391, type: "lock", description: "" }
   ]
 };
 
