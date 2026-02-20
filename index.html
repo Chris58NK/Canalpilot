@@ -3,21 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canal Pilot</title>
-    <link rel="stylesheet" href="style.css">
+    <title>CanalPilot Application</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 500px;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>Welcome to Canal Pilot</h1>
-    </header>
-    <main>
-        <section>
-            <h2>About Us</h2>
-            <p>This is the Canal Pilot project, designed to help navigate waterways effectively.</p>
-        </section>
-        <footer>
-            <p>&copy; 2026 Canal Pilot. All rights reserved.</p>
-        </footer>
-    </main>
+    <h1>CanalPilot Application</h1>
+    <div>
+        <input type="text" id="searchBox" placeholder="Search for a location..." />
+        <button id="searchButton">Search</button>
+    </div>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([51.505, -0.09], 13);
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Search functionality
+        document.getElementById('searchButton').addEventListener('click', function() {
+            var query = document.getElementById('searchBox').value;
+            // Make an API call or a function to search for a location
+            searchLocation(query);
+        });
+
+        function searchLocation(query) {
+            // Example search logic (to be replaced with actual search)
+            var lat = 51.505; // Example latitude
+            var lon = -0.09; // Example longitude
+            map.setView([lat, lon], 13);
+            L.marker([lat, lon]).addTo(map).bindPopup('You searched for: ' + query);
+        }
+
+        // Route calculator (mock example)
+        function calculateRoute(start, end) {
+            var distance = Math.abs(end - start); // Ensure positive distance
+            alert('Calculated distance: ' + distance + ' units');
+        }
+
+        // Example of route calculation (to be replaced with actual route logic)
+        calculateRoute(5, -3);
+        
+    </script>
 </body>
 </html>
