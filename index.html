@@ -1,69 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canalpilot</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <style>
-        #map {
-            height: 600px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="map"></div>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="testCorridor.js"></script>
-    <script>
-        var map = L.map('map').setView([52.47, -1.07], 10);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-        }).addTo(map);
-
-        // Extract lat/lon coordinates from corridor feature points
-        var featurePoints = testCorridor.features.map(function(f) {
-            return [f.latitude, f.longitude];
-        });
-
-        // Catmull-Rom spline interpolation through a set of points
-        function catmullRomCoord(p0, p1, p2, p3, t) {
-            var t2 = t * t, t3 = t2 * t;
-            return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
-        }
-
-        function catmullRomSpline(points, segmentSteps) {
-            if (points.length < 2) return points;
-            var result = [];
-            // Duplicate first and last points so the spline passes through all input points
-            var pts = [points[0]].concat(points).concat([points[points.length - 1]]);
-            for (var i = 1; i < pts.length - 2; i++) {
-                var p0 = pts[i - 1], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2];
-                for (var s = 0; s < segmentSteps; s++) {
-                    var t = s / segmentSteps;
-                    result.push([
-                        catmullRomCoord(p0[0], p1[0], p2[0], p3[0], t),
-                        catmullRomCoord(p0[1], p1[1], p2[1], p3[1], t)
-                    ]);
-                }
-            }
-            result.push(points[points.length - 1]);
-            return result;
-        }
-
-        // Generate smooth curve points and draw the canal route
-        var curvePoints = catmullRomSpline(featurePoints, 20);
-        var polyline = L.polyline(curvePoints, {color: 'blue', weight: 3}).addTo(map);
-
-        // Add circle markers for each feature point
-        testCorridor.features.forEach(function(feature) {
-            L.circleMarker([feature.latitude, feature.longitude], {
-                radius: 4,
-                color: 'red',
-                fillColor: '#f03',
-                fillOpacity: 0.5
-            }).bindPopup('<b>' + feature.name + '</b><br>' + feature.type).addTo(map);
-        });
-
-        map.fitBounds(polyline.getBounds());
-    </script>
+    <div id="app">
+        <header>
+            <h1>Canalpilot</h1>
+            <div id="search">
+                <input type="text" placeholder="Search..." />
+                <button>Search</button>
+            </div>
+        </header>
+        <main>
+            <section id="stats">
+                <h2>Statistics</h2>
+                <p>Loading stats...</p>
+            </section>
+            <section id="map">
+                <h2>Map</h2>
+                <div id="map-container">
+                    <!-- Map implementation goes here -->
+                </div>
+            </section>
+        </main>
+        <footer>
+            <p>&copy; 2026 Canalpilot</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
