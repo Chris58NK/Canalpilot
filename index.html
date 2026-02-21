@@ -61,7 +61,7 @@ async function fetchCRTCanalGeometry(){
 async function fetchOverpassCanalData(){
     if(overpassCanalGeometry)return overpassCanalGeometry;
     try{
-        const overpassQuery='[out:json][timeout:25];(way["waterway"="canal"](52.4,-1.25,52.7,-0.9););out geom;';/* bbox: Leicester area (south,west,north,east) */
+        const overpassQuery='[out:json][timeout:25];(way["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](52.4,-1.25,52.7,-0.9);relation["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](52.4,-1.25,52.7,-0.9););out geom;';/* bbox: Leicester area (south,west,north,east) */
         const overpassUrl='https://overpass-api.de/api/interpreter';
         const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});
         console.log('Overpass Response:',{status:response.status,timestamp:new Date().toISOString()});
@@ -70,19 +70,44 @@ async function fetchOverpassCanalData(){
         if(data.elements&&data.elements.length>0){
             const coords=[];
             data.elements.forEach(el=>{
-                if(el.type==='way'&&el.geometry){
+                if(el.geometry){
                     el.geometry.forEach(pt=>coords.push([pt.lat,pt.lon]));
                 }
             });
             if(coords.length>0){
                 overpassCanalGeometry=coords;
-                console.log('Overpass API: Loaded '+coords.length+' coordinates for Leicester area canals');
+                console.log('Overpass: Loaded '+coords.length+' coordinates for Leicester Line specifically');
                 return overpassCanalGeometry;
             }
         }
-        throw new Error('No valid Overpass geometry found');
+        throw new Error('No Leicester Line geometry found');
     }catch(e){
-        console.warn('Overpass fetch failed:',e.message);
+        console.warn('Overpass Leicester Line fetch failed:',e.message,'- falling back to all canals');
+        return fetchOverpassAllCanals();
+    }
+}
+async function fetchOverpassAllCanals(){
+    try{
+        const overpassQuery='[out:json][timeout:25];(way["waterway"="canal"](52.4,-1.25,52.7,-0.9);relation["waterway"="canal"](52.4,-1.25,52.7,-0.9););out geom;';/* bbox: Leicester area (south,west,north,east) */
+        const overpassUrl='https://overpass-api.de/api/interpreter';
+        const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        const data=await response.json();
+        const coords=[];
+        if(data.elements){
+            data.elements.forEach(el=>{
+                if(el.geometry){
+                    el.geometry.forEach(pt=>coords.push([pt.lat,pt.lon]));
+                }
+            });
+        }
+        if(coords.length>0){
+            console.log('Overpass: Loaded '+coords.length+' coordinates for all canals in area');
+            return coords;
+        }
+        return null;
+    }catch(e){
+        console.warn('Overpass all canals fetch failed:',e.message);
         return null;
     }
 }
