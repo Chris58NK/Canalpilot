@@ -405,26 +405,24 @@ function calculateLookahead(){
     clearMarkers();
     
     // Use Overpass canal geometry between start and end points
-    let pathCoords=[];
-    if(overpassCanalsData&&overpassCanalsData.allCoords){
-        const startLat=currentStart.latitude;
-        const startLon=currentStart.longitude;
-        const endLat=currentEnd?currentEnd.latitude:currentStart.latitude;
-        const endLon=currentEnd?currentEnd.longitude:currentStart.longitude;
-        pathCoords=overpassCanalsData.allCoords.filter(coord=>{
-            const lat=coord[0];
-            const lon=coord[1];
-            const minLat=Math.min(startLat,endLat);
-            const maxLat=Math.max(startLat,endLat);
-            const minLon=Math.min(startLon,endLon);
-            const maxLon=Math.max(startLon,endLon);
-            return lat>=minLat&&lat<=maxLat&&lon>=minLon&&lon<=maxLon;
-        });
+    // Use CRT canal geometry if available, otherwise Overpass
+let pathCoords=[];
+if(crtCanalGeometry&&crtCanalGeometry.length>0){
+    pathCoords=crtCanalGeometry;
+}else if(overpassCanalsData&&overpassCanalsData.byWayId){
+    // Find the Leicester Line way from Overpass
+    for(const wayId in overpassCanalsData.byWayId){
+        const canal=overpassCanalsData.byWayId[wayId];
+        if(canal.name.toLowerCase().includes('leicester')){
+            pathCoords=canal.coords;
+            break;
+        }
     }
-    if(pathCoords.length===0){
-        pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
-    }
-    polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
+}
+if(pathCoords.length===0){
+    pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
+}
+polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
     
     features.forEach(f=>{
         const colors={lock:'#ff6b6b',bridge:'#4ecdc4',marina:'#45b7d1',wharf:'#96ceb4',water:'#3498db',tunnel:'#95a5a6',junction:'#667eea'};
