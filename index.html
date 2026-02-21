@@ -1,56 +1,28 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>🚤 CanalPilot - Route Calculator</title><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#74ebd5,#acb6e5);padding:20px;min-height:100vh}.container{max-width:1600px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}h1{grid-column:1/-1;text-align:center;color:white;font-size:28px;margin-bottom:20px}.panel{background:white;padding:20px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.1)}h2{color:#333;font-size:18px;margin-bottom:15px;border-bottom:2px solid #007BFF;padding-bottom:10px}.input-group{margin-bottom:15px}label{display:block;font-weight:bold;margin-bottom:5px;color:#555;font-size:13px}.search-box{width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:14px}.search-box:focus{outline:none;border-color:#007BFF}.search-results{position:absolute;background:white;border:2px solid #007BFF;border-top:none;border-radius:0 0 5px 5px;max-height:250px;overflow-y:auto;width:calc(100% - 4px);z-index:100;display:none}.search-results.show{display:block}.search-item{padding:8px;cursor:pointer;border-bottom:1px solid #eee;font-size:12px}.search-item:hover{background:#f0f8ff}.selected-badge{background:#e8f5e9;padding:8px;border-radius:5px;border-left:4px solid #28a745;font-size:12px;margin-top:8px;display:none}.selected-badge.show{display:block}.button-group{display:flex;gap:10px;margin:20px 0}button{flex:1;padding:10px;background-color:#007BFF;color:white;border:none;border-radius:5px;cursor:pointer;font-weight:bold}button:hover{background-color:#0056b3}#map{height:600px;border-radius:8px}.map-panel{grid-column:2/4;padding:0}.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:15px 0}.stat-box{background:#f0f8ff;padding:12px;border-radius:5px;border-left:4px solid #007BFF;text-align:center}.stat-label{font-size:11px;color:#666}.stat-value{font-size:20px;font-weight:bold;color:#007BFF}.features-list{max-height:400px;overflow-y:auto}.feature-item{padding:10px;margin:8px 0;background:#f9f9f9;border-left:4px solid #007BFF;border-radius:4px;font-size:12px;cursor:pointer}.feature-item:hover{background:#f0f0f0}.badge{display:inline-block;padding:2px 6px;border-radius:10px;color:white;font-size:10px;font-weight:bold;margin-right:5px}.badge-lock{background:#ff6b6b}.badge-bridge{background:#4ecdc4}.badge-marina{background:#45b7d1}.badge-wharf{background:#96ceb4}.badge-water{background:#3498db}.badge-tunnel{background:#95a5a6}.badge-junction{background:#667eea}.empty-state{text-align:center;padding:30px 10px;color:#999}.route-info{background:#e8f5e9;padding:10px;border-radius:5px;margin:10px 0;border-left:4px solid #28a745;font-size:12px}.search-container{position:relative}@media (max-width:1200px){.container{grid-template-columns:1fr 1fr}.map-panel{grid-column:1/-1}h1{grid-column:1/-1}}</style></head><body><h1>🚤 CanalPilot - Route Calculator</h1><div class="container"><div class="panel"><h2>Route Setup</h2><div class="input-group"><label>Start Point:</label><div class="search-container"><input type="text" id="startSearch" class="search-box" placeholder="Type to search..."><div id="startResults" class="search-results"></div></div><div id="startBadge" class="selected-badge"></div></div><div class="input-group"><label>End Point:</label><div class="search-container"><input type="text" id="endSearch" class="search-box" placeholder="Type to search..."><div id="endResults" class="search-results"></div></div><div id="endBadge" class="selected-badge"></div></div><div id="routeInfo" class="route-info" style="display:none">Distance: <strong id="routeDist">0</strong> mi | Duration: <strong id="routeDur">0</strong></div><h2>Calculate</h2><div class="input-group"><label>Speed (mph):</label><input type="number" id="speed" value="3" min="0.5" max="10" step="0.5" class="search-box"></div><div class="input-group"><label>Lookahead (hours):</label><input type="number" id="lookahead" value="2" min="0.5" max="24" step="0.5" class="search-box"></div><div class="button-group"><button onclick="calculateLookahead()">Calculate</button><button onclick="resetForm()">Reset</button></div></div><div class="panel"><h2>Upcoming Features</h2><div id="results"><div class="empty-state">Select start point and click Calculate</div></div></div><div class="panel map-panel"><div id="map"></div></div></div><script src="testCorridor.js"></script><script>let map;let markers=[];let polyline;let fullPathPolyline;let startMarker;let endMarker;let routePolyline;let currentStart=null;let currentEnd=null;
-// Ordered list of CRT FeatureServer endpoints to try (most likely correct first)
-const CRT_ENDPOINTS=[
-    'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
-    'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/Navigations/FeatureServer/0/query',
-    'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Waterways/FeatureServer/0/query'
-];
-// WHERE clauses using candidate field names for the Leicester Line
-const CRT_WHERE_CLAUSES=[
-    "NAV_UNIT_NAME LIKE '%Leicester Line%'",
-    "name LIKE '%Leicester Line%'",
-    "NAVIGATION_NAME LIKE '%Leicester Line%'",
-    "NAV_NAME LIKE '%Leicester Line%'"
-];
-let crtCanalGeometry=null;let crtCanalLayer=null;
-async function fetchCRTCanalGeometry(){
-    if(crtCanalGeometry)return crtCanalGeometry;
-    for(const endpoint of CRT_ENDPOINTS){
-        for(const whereClause of CRT_WHERE_CLAUSES){
-            const params=new URLSearchParams({where:whereClause,outFields:'*',returnGeometry:true,f:'geojson'});
-            console.log('CRT WFS: Trying',endpoint,'| where:',whereClause);
-            try{
-                const response=await fetch(endpoint+'?'+params);
-                console.log('CRT WFS: Response status',response.status,'for',endpoint);
-                if(!response.ok){console.warn('CRT WFS: HTTP error',response.status,response.statusText);continue;}
-                const data=await response.json();
-                if(data.error){console.warn('CRT WFS: API error',data.error.message||JSON.stringify(data.error));continue;}
-                if(data.features&&data.features.length>0){
-                    const coords=[];
-                    data.features.forEach(feat=>{
-                        if(feat.geometry&&feat.geometry.coordinates){
-                            if(feat.geometry.type==='LineString'||feat.geometry.type==='MultiLineString'){
-                                const lines=feat.geometry.type==='MultiLineString'?feat.geometry.coordinates:[feat.geometry.coordinates];
-                                /* GeoJSON uses [lng,lat]; Leaflet needs [lat,lng] */
-                                lines.forEach(line=>line.forEach(c=>coords.push([c[1],c[0]])));
-                            }
-                        }
-                    });
-                    if(coords.length>0){
-                        crtCanalGeometry=coords;
-                        console.log('CRT WFS: Loaded '+coords.length+' coordinates for Leicester Line');
-                        return crtCanalGeometry;
-                    }
-                    console.warn('CRT WFS: Got',data.features.length,'features but no valid geometry');
-                }else{
-                    console.warn('CRT WFS: No features returned for endpoint',endpoint,'where:',whereClause);
-                }
-            }catch(e){
-                console.warn('CRT WFS: Fetch error for',endpoint+':',e.message);
-            }
-        }
-    }
-    console.warn('CRT WFS: All endpoints failed - using feature-based fallback');
-    return null;
-}
-async function initMap(){map=L.map('map').setView([52.36,-1.1],10);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);setupSearch('startSearch','startResults','startBadge','start');setupSearch('endSearch','endResults','endBadge','end');const crtCoords=await fetchCRTCanalGeometry();if(crtCoords){crtCanalLayer=L.polyline(crtCoords,{color:'#4a90d9',weight:3,opacity:0.7}).addTo(map);}else{const allPathCoords=testCorridor.features.slice().sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);L.polyline(allPathCoords,{color:'#aaa',weight:2,opacity:0.5}).addTo(map);}}function setupSearch(inputId,resultsId,badgeId,type){const input=document.getElementById(inputId);const resultsDiv=document.getElementById(resultsId);input.addEventListener('input',function(){const query=this.value.toLowerCase();resultsDiv.innerHTML='';if(query.length===0){resultsDiv.classList.remove('show');return;}const filtered=testCorridor.features.filter(f=>f.name.toLowerCase().includes(query)).slice(0,15);if(filtered.length===0){resultsDiv.innerHTML='<div class="search-item" style="color:#999;">No matches</div>';}else{filtered.forEach(f=>{const item=document.createElement('div');item.className='search-item';item.textContent=f.name+' ('+f.cumulativeDistance.toFixed(1)+' mi)';item.onclick=function(){selectFeature(f,type,inputId,badgeId);};resultsDiv.appendChild(item);});}resultsDiv.classList.add('show');});document.addEventListener('click',function(e){if(!e.target.closest('.search-container')){resultsDiv.classList.remove('show');}});}function selectFeature(feature,type,inputId,badgeId){const input=document.getElementById(inputId);const badge=document.getElementById(badgeId);input.value=feature.name;badge.innerHTML='✓ <strong>'+feature.name+'</strong><br>'+feature.cumulativeDistance.toFixed(1)+' mi';badge.classList.add('show');document.getElementById(inputId.replace('Search','Results')).classList.remove('show');if(type==='start'){currentStart=feature;addStartMarker();}else{currentEnd=feature;addEndMarker();}}function addStartMarker(){if(currentStart){if(startMarker)map.removeLayer(startMarker);startMarker=L.circleMarker([currentStart.latitude,currentStart.longitude],{radius:10,fillColor:'#28a745',color:'white',weight:2,fillOpacity:0.9}).bindPopup('START: '+currentStart.name).addTo(map);updateRoute();}}function addEndMarker(){if(currentEnd){if(endMarker)map.removeLayer(endMarker);endMarker=L.circleMarker([currentEnd.latitude,currentEnd.longitude],{radius:10,fillColor:'#dc3545',color:'white',weight:2,fillOpacity:0.9}).bindPopup('END: '+currentEnd.name).addTo(map);updateRoute();}}function updateRoute(){if(currentStart&&currentEnd){if(routePolyline)map.removeLayer(routePolyline);const dist=Math.abs(currentEnd.cumulativeDistance-currentStart.cumulativeDistance);const speed=parseFloat(document.getElementById('speed').value)||3;const hours=Math.floor(dist/speed);const mins=Math.round((dist/speed-hours)*60);const timeStr=hours>0?hours+'h '+mins+'m':mins+'m';document.getElementById('routeDist').textContent=dist.toFixed(1);document.getElementById('routeDur').textContent=timeStr;document.getElementById('routeInfo').style.display='block';const minDist=Math.min(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);const maxDist=Math.max(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);const pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=minDist&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);routePolyline=L.polyline(pathCoords,{color:'#28a745',weight:4,opacity:0.8}).addTo(map);}}function calculateLookahead(){if(!currentStart){alert('Select a start point');return;}const speed=parseFloat(document.getElementById('speed').value);const hours=parseFloat(document.getElementById('lookahead').value);const distance=speed*hours;const maxDist=currentStart.cumulativeDistance+distance;const features=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);const resultDiv=document.getElementById('results');resultDiv.innerHTML='';if(features.length===0){resultDiv.innerHTML='<div class="empty-state">No features found</div>';clearMarkers();return;}const locks=features.filter(f=>f.type==='lock').length;const bridges=features.filter(f=>f.type==='bridge').length;const marinas=features.filter(f=>f.type==='marina').length;let html='<div class="stats"><div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">'+features.length+'</div></div>';html+='<div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">'+locks+'</div></div>';html+='<div class="stat-box"><div class="stat-label">Bridges</div><div class="stat-value">'+bridges+'</div></div>';html+='<div class="stat-box"><div class="stat-label">Marinas</div><div class="stat-value">'+marinas+'</div></div></div>';html+='<div class="features-list">';features.forEach(f=>{const eta=(f.cumulativeDistance-currentStart.cumulativeDistance)/speed;const h=Math.floor(eta);const m=Math.round((eta-h)*60);const timeStr=h>0?h+'h '+m+'m':m+'m';html+='<div class="feature-item" onclick="map.setView(['+f.latitude+','+f.longitude+'],14)">';html+='<span class="badge badge-'+f.type+'">'+f.type.toUpperCase()+'</span>';html+='<strong>'+f.name+'</strong><br>';html+='<small>'+f.cumulativeDistance.toFixed(1)+' mi | ETA: '+timeStr+'</small>';html+='</div>';});html+='</div>';resultDiv.innerHTML=html;clearMarkers();const allPathCoords=testCorridor.features.slice().sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);fullPathPolyline=L.polyline(allPathCoords,{color:'#aaa',weight:2,opacity:0.5}).addTo(map);const pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);features.forEach(f=>{const colors={lock:'#ff6b6b',bridge:'#4ecdc4',marina:'#45b7d1',wharf:'#96ceb4',water:'#3498db',tunnel:'#95a5a6',junction:'#667eea'};const m=L.circleMarker([f.latitude,f.longitude],{radius:6,fillColor:colors[f.type]||'#007BFF',color:'white',weight:1,fillOpacity:0.8}).bindPopup(f.name).addTo(map);markers.push(m);});const allCoords=pathCoords.slice();if(currentEnd)allCoords.push([currentEnd.latitude,currentEnd.longitude]);const bounds=L.latLngBounds(allCoords);map.fitBounds(bounds,{padding:[50,50]});}function clearMarkers(){markers.forEach(m=>map.removeLayer(m));markers=[];if(polyline)map.removeLayer(polyline);if(fullPathPolyline)map.removeLayer(fullPathPolyline);if(routePolyline)map.removeLayer(routePolyline);}function resetForm(){document.getElementById('startSearch').value='';document.getElementById('endSearch').value='';document.getElementById('startBadge').classList.remove('show');document.getElementById('endBadge').classList.remove('show');document.getElementById('speed').value='3';document.getElementById('lookahead').value='2';document.getElementById('results').innerHTML='<div class="empty-state">Select start point and click Calculate</div>';document.getElementById('routeInfo').style.display='none';currentStart=null;currentEnd=null;clearMarkers();if(startMarker)map.removeLayer(startMarker);if(endMarker)map.removeLayer(endMarker);}window.onload=function(){initMap();};</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CanalPilot</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <header>
+        <h1>Welcome to CanalPilot</h1>
+    </header>
+    <main>
+        <div id="map"></div>
+        <div id="search">
+            <input type="text" placeholder="Search...">
+            <button>Search</button>
+        </div>
+        <div id="routing">
+            <button>Get Route</button>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2026 CanalPilot. All rights reserved.</p>
+    </footer>
+</body>
+</html>
