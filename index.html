@@ -254,25 +254,37 @@ async function fetchOverpassAllCanals(){
 
 function drawOverpassCanals(canalsData){
     if(!canalsData||!canalsData.byWayId)return;
+    const leicesterCoords=[];
     Object.keys(canalsData.byWayId).forEach(wayId=>{
         const canal=canalsData.byWayId[wayId];
         if(canal.coords.length>0){
             const isLeicesterLine=canal.name.toLowerCase().includes('leicester');
-            const polylineLayer=L.polyline(canal.coords,{
-                color:isLeicesterLine?'#2563eb':'#6b7280',
-                weight:isLeicesterLine?4:2,
-                opacity:isLeicesterLine?0.85:0.6,
-                lineCap:'round',
-                lineJoin:'round'
-            }).addTo(map);
-            overpassCanalLayers.push(polylineLayer);
             if(isLeicesterLine){
-                console.log('Drew Leicester Line with '+canal.coords.length+' coordinates');
+                leicesterCoords.push(canal.coords);
             }else{
+                const polylineLayer=L.polyline(canal.coords,{
+                    color:'#6b7280',
+                    weight:2,
+                    opacity:0.6,
+                    lineCap:'round',
+                    lineJoin:'round'
+                }).addTo(map);
+                overpassCanalLayers.push(polylineLayer);
                 console.log('Drew '+canal.name+' with '+canal.coords.length+' coordinates');
             }
         }
     });
+    if(leicesterCoords.length>0){
+        const polylineLayer=L.polyline(leicesterCoords,{
+            color:'#2563eb',
+            weight:4,
+            opacity:0.85,
+            lineCap:'round',
+            lineJoin:'round'
+        }).addTo(map);
+        overpassCanalLayers.push(polylineLayer);
+        console.log('Drew Leicester Line as single polyline with '+leicesterCoords.length+' segments');
+    }
 }
 
 async function initMap(){
