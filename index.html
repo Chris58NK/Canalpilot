@@ -460,21 +460,6 @@ function calculateLookahead(){
     lastMaxDist=currentStart.cumulativeDistance+distance;
     lastAllFeatures=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=lastMaxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
     clearMarkers();
-    let pathCoords=[];
-    if(crtCanalGeometry&&crtCanalGeometry.length>0){
-        pathCoords=crtCanalGeometry;
-    }else if(leicesterCoords.length>0){
-        pathCoords=leicesterCoords.flat();
-    }else{
-        pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=lastMaxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
-    }
-    if(pathCoords.length>0){
-        // polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
-        const allCoords=pathCoords.slice();
-        if(currentEnd)allCoords.push([currentEnd.latitude,currentEnd.longitude]);
-        const bounds=L.latLngBounds(allCoords);
-        map.fitBounds(bounds,{padding:[50,50]});
-    }
     renderFeatures();
 }
 
