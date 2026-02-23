@@ -256,6 +256,7 @@ async function fetchOverpassAllCanals(){
 function drawOverpassCanals(canalsData){
     if(!canalsData||!canalsData.byWayId)return;
     leicesterCoords=[];
+    // Phase 1: Draw all non-Leicester canals as gray lines
     Object.keys(canalsData.byWayId).forEach(wayId=>{
         const canal=canalsData.byWayId[wayId];
         if(canal.coords.length>0){
@@ -263,29 +264,26 @@ function drawOverpassCanals(canalsData){
             if(isLeicesterLine){
                 leicesterCoords.push(canal.coords);
             }else{
-                const polylineLayer=L.polyline(canal.coords,{
+                L.polyline(canal.coords,{
                     color:'#6b7280',
                     weight:2,
                     opacity:0.6,
                     lineCap:'round',
                     lineJoin:'round'
                 }).addTo(map);
-                overpassCanalLayers.push(polylineLayer);
-                console.log('Drew '+canal.name+' with '+canal.coords.length+' coordinates');
             }
         }
     });
+    // Phase 2: Draw Leicester Line LAST so it renders on top
     if(leicesterCoords.length>0){
-        const polylineLayer=L.polyline(leicesterCoords,{
+        const leicesterLayer=L.polyline(leicesterCoords,{
             color:'#2563eb',
             weight:4,
             opacity:0.85,
             lineCap:'round',
             lineJoin:'round'
         }).addTo(map);
-        polylineLayer.bringToFront();
-        overpassCanalLayers.push(polylineLayer);
-        console.log('Drew Leicester Line as single polyline with '+leicesterCoords.length+' segments');
+        leicesterLayer.bringToFront();
     }
 }
 
