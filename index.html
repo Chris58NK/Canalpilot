@@ -41,8 +41,12 @@ button:hover{background-color:#0056b3}
 .badge-marina{background:#45b7d1}
 .badge-wharf{background:#96ceb4}
 .badge-water{background:#3498db}
+.badge-aqueduct{background:#1abc9c}
 .badge-tunnel{background:#95a5a6}
 .badge-junction{background:#667eea}
+.badge-winding_hole{background:#f39c12}
+.filter-panel{margin-bottom:12px;padding:8px;background:#f5f5f5;border-radius:5px}
+.filter-panel label{font-size:11px;font-weight:normal;cursor:pointer;margin-right:8px;display:inline-flex;align-items:center;gap:2px}
 .empty-state{text-align:center;padding:30px 10px;color:#999}
 .route-info{background:#e8f5e9;padding:10px;border-radius:5px;margin:10px 0;border-left:4px solid #28a745;font-size:12px}
 .search-container{position:relative}
@@ -91,6 +95,10 @@ button:hover{background-color:#0056b3}
 </div>
 <div class="panel">
 <h2>Upcoming Features</h2>
+<div class="filter-panel">
+<strong style="font-size:11px;color:#555;display:block;margin-bottom:4px;">Show:</strong>
+<label><input type="checkbox" value="lock" checked onchange="applyFilters()"> Lock</label><label><input type="checkbox" value="bridge" checked onchange="applyFilters()"> Bridge</label><label><input type="checkbox" value="marina" checked onchange="applyFilters()"> Marina</label><label><input type="checkbox" value="wharf" checked onchange="applyFilters()"> Wharf</label><label><input type="checkbox" value="winding_hole" checked onchange="applyFilters()"> Winding Hole</label><label><input type="checkbox" value="water" checked onchange="applyFilters()"> Water</label><label><input type="checkbox" value="aqueduct" checked onchange="applyFilters()"> Aqueduct</label><label><input type="checkbox" value="tunnel" checked onchange="applyFilters()"> Tunnel</label><label><input type="checkbox" value="junction" checked onchange="applyFilters()"> Junction</label>
+</div>
 <div id="results">
 <div class="empty-state">Select start point and click Calculate</div>
 </div>
@@ -114,6 +122,10 @@ let crtCanalGeometry=null;
 let crtCanalLayer=null;
 let overpassCanalLayers=[];
 let overpassCanalsData=null;
+let lastAllFeatures=[];
+let lastMaxDist=0;
+let activeFilters=new Set(['lock','bridge','marina','wharf','winding_hole','water','aqueduct','tunnel','junction']);
+const FEATURE_COLORS={lock:'#ff6b6b',bridge:'#4ecdc4',marina:'#45b7d1',wharf:'#96ceb4',water:'#3498db',winding_hole:'#f39c12',aqueduct:'#1abc9c',tunnel:'#95a5a6',junction:'#667eea'};
 
 const CRT_ENDPOINTS=[
     'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
@@ -364,6 +376,65 @@ function updateRoute(){
     }
 }
 
+function getFeatureType(f){
+    if(f.type==='water'&&f.name.toLowerCase().includes('winding hole'))return 'winding_hole';
+    return f.type;
+}
+
+function applyFilters(){
+    activeFilters=new Set();
+    document.querySelectorAll('.filter-panel input[type=checkbox]').forEach(cb=>{
+        if(cb.checked)activeFilters.add(cb.value);
+    });
+    renderFeatures();
+}
+
+function renderFeatures(){
+    const resultDiv=document.getElementById('results');
+    if(!currentStart||lastAllFeatures.length===0){
+        resultDiv.innerHTML='<div class="empty-state">Select start point and click Calculate</div>';
+        return;
+    }
+    const speed=parseFloat(document.getElementById('speed').value);
+    const features=lastAllFeatures.filter(f=>activeFilters.has(getFeatureType(f)));
+    resultDiv.innerHTML='';
+    if(features.length===0){
+        resultDiv.innerHTML='<div class="empty-state">No features match the current filters</div>';
+        markers.forEach(m=>map.removeLayer(m));
+        markers=[];
+        return;
+    }
+    const locks=features.filter(f=>getFeatureType(f)==='lock').length;
+    const bridges=features.filter(f=>getFeatureType(f)==='bridge').length;
+    const marinas=features.filter(f=>getFeatureType(f)==='marina').length;
+    let html='<div class="stats"><div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">'+features.length+'</div></div>';
+    html+='<div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">'+locks+'</div></div>';
+    html+='<div class="stat-box"><div class="stat-label">Bridges</div><div class="stat-value">'+bridges+'</div></div>';
+    html+='<div class="stat-box"><div class="stat-label">Marinas</div><div class="stat-value">'+marinas+'</div></div></div>';
+    html+='<div class="features-list">';
+    features.forEach(f=>{
+        const ft=getFeatureType(f);
+        const eta=(f.cumulativeDistance-currentStart.cumulativeDistance)/speed;
+        const h=Math.floor(eta);
+        const m=Math.round((eta-h)*60);
+        const timeStr=h>0?h+'h '+m+'m':m+'m';
+        html+='<div class="feature-item" onclick="map.setView(['+f.latitude+','+f.longitude+'],14)">';
+        html+='<span class="badge badge-'+ft+'">'+ft.replace('_',' ').toUpperCase()+'</span>';
+        html+='<strong>'+f.name+'</strong><br>';
+        html+='<small>'+f.cumulativeDistance.toFixed(1)+' mi | ETA: '+timeStr+'</small>';
+        html+='</div>';
+    });
+    html+='</div>';
+    resultDiv.innerHTML=html;
+    markers.forEach(m=>map.removeLayer(m));
+    markers=[];
+    features.forEach(f=>{
+        const ft=getFeatureType(f);
+        const m=L.circleMarker([f.latitude,f.longitude],{radius:6,fillColor:FEATURE_COLORS[ft]||'#007BFF',color:'white',weight:1,fillOpacity:0.8}).bindPopup(f.name).addTo(map);
+        markers.push(m);
+    });
+}
+
 function calculateLookahead(){
     if(!currentStart){
         alert('Select a start point');
@@ -372,67 +443,30 @@ function calculateLookahead(){
     const speed=parseFloat(document.getElementById('speed').value);
     const hours=parseFloat(document.getElementById('lookahead').value);
     const distance=speed*hours;
-    const maxDist=currentStart.cumulativeDistance+distance;
-    const features=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
-    const resultDiv=document.getElementById('results');
-    resultDiv.innerHTML='';
-    if(features.length===0){
-        resultDiv.innerHTML='<div class="empty-state">No features found</div>';
-        clearMarkers();
-        return;
-    }
-    const locks=features.filter(f=>f.type==='lock').length;
-    const bridges=features.filter(f=>f.type==='bridge').length;
-    const marinas=features.filter(f=>f.type==='marina').length;
-    let html='<div class="stats"><div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">'+features.length+'</div></div>';
-    html+='<div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">'+locks+'</div></div>';
-    html+='<div class="stat-box"><div class="stat-label">Bridges</div><div class="stat-value">'+bridges+'</div></div>';
-    html+='<div class="stat-box"><div class="stat-label">Marinas</div><div class="stat-value">'+marinas+'</div></div></div>';
-    html+='<div class="features-list">';
-    features.forEach(f=>{
-        const eta=(f.cumulativeDistance-currentStart.cumulativeDistance)/speed;
-        const h=Math.floor(eta);
-        const m=Math.round((eta-h)*60);
-        const timeStr=h>0?h+'h '+m+'m':m+'m';
-        html+='<div class="feature-item" onclick="map.setView(['+f.latitude+','+f.longitude+'],14)">';
-        html+='<span class="badge badge-'+f.type+'">'+f.type.toUpperCase()+'</span>';
-        html+='<strong>'+f.name+'</strong><br>';
-        html+='<small>'+f.cumulativeDistance.toFixed(1)+' mi | ETA: '+timeStr+'</small>';
-        html+='</div>';
-    });
-    html+='</div>';
-    resultDiv.innerHTML=html;
+    lastMaxDist=currentStart.cumulativeDistance+distance;
+    lastAllFeatures=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=lastMaxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
     clearMarkers();
-    
-    // Use Overpass canal geometry between start and end points
-    // Use CRT canal geometry if available, otherwise Overpass
-let pathCoords=[];
-if(crtCanalGeometry&&crtCanalGeometry.length>0){
-    pathCoords=crtCanalGeometry;
-}else if(overpassCanalsData&&overpassCanalsData.byWayId){
-    // Find the Leicester Line way from Overpass
-    for(const wayId in overpassCanalsData.byWayId){
-        const canal=overpassCanalsData.byWayId[wayId];
-        if(canal.name.toLowerCase().includes('leicester')){
-            pathCoords=canal.coords;
-            break;
+    let pathCoords=[];
+    if(crtCanalGeometry&&crtCanalGeometry.length>0){
+        pathCoords=crtCanalGeometry;
+    }else if(overpassCanalsData&&overpassCanalsData.byWayId){
+        for(const wayId in overpassCanalsData.byWayId){
+            const canal=overpassCanalsData.byWayId[wayId];
+            if(canal.name.toLowerCase().includes('leicester')){
+                pathCoords=canal.coords;
+                break;
+            }
         }
     }
-}
-if(pathCoords.length===0){
-    pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
-}
-polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
-    
-    features.forEach(f=>{
-        const colors={lock:'#ff6b6b',bridge:'#4ecdc4',marina:'#45b7d1',wharf:'#96ceb4',water:'#3498db',tunnel:'#95a5a6',junction:'#667eea'};
-        const m=L.circleMarker([f.latitude,f.longitude],{radius:6,fillColor:colors[f.type]||'#007BFF',color:'white',weight:1,fillOpacity:0.8}).bindPopup(f.name).addTo(map);
-        markers.push(m);
-    });
+    if(pathCoords.length===0){
+        pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=lastMaxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
+    }
+    polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
     const allCoords=pathCoords.slice();
     if(currentEnd)allCoords.push([currentEnd.latitude,currentEnd.longitude]);
     const bounds=L.latLngBounds(allCoords);
     map.fitBounds(bounds,{padding:[50,50]});
+    renderFeatures();
 }
 
 function clearMarkers(){
