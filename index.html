@@ -276,7 +276,8 @@ function drawOverpassCanals(canalsData){
     });
     // Phase 2: Draw Leicester Line LAST so it renders on top
     if(leicesterCoords.length>0){
-        const leicesterLayer=L.polyline(leicesterCoords,{
+        const flatCoords=leicesterCoords.flat();
+        const leicesterLayer=L.polyline(flatCoords,{
             color:'#2563eb',
             weight:4,
             opacity:0.85,
@@ -284,6 +285,7 @@ function drawOverpassCanals(canalsData){
             lineJoin:'round'
         }).addTo(map);
         leicesterLayer.bringToFront();
+        console.log('Drew Leicester Line as single polyline with '+flatCoords.length+' coordinates');
     }
 }
 
