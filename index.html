@@ -463,35 +463,18 @@ function calculateLookahead(){
     let pathCoords=[];
     if(crtCanalGeometry&&crtCanalGeometry.length>0){
         pathCoords=crtCanalGeometry;
-    }else if(overpassCanalsData&&overpassCanalsData.byWayId){
-        for(const wayId in overpassCanalsData.byWayId){
-            const canal=overpassCanalsData.byWayId[wayId];
-            if(canal.name.toLowerCase().includes('leicester')){
-                pathCoords=canal.coords;
-                break;
-            }
-        }
+    }else if(leicesterCoords.length>0){
+        pathCoords=leicesterCoords.flat();
+    }else{
+        pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=lastMaxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
     }
-    if(pathCoords.length===0){
-        if(leicesterCoords.length>0){
-            const flat=leicesterCoords.flat();
-            if(flat.length>0){
-                const endFeats=testCorridor.features.filter(f=>f.cumulativeDistance<=lastMaxDist).sort((a,b)=>b.cumulativeDistance-a.cumulativeDistance);
-                const endRef=endFeats.length>0?endFeats[0]:currentStart;
-                const startIndex=flat.reduce((bi,c,i)=>(c[0]-currentStart.latitude)**2+(c[1]-currentStart.longitude)**2<(flat[bi][0]-currentStart.latitude)**2+(flat[bi][1]-currentStart.longitude)**2?i:bi,0);
-                const endIndex=flat.reduce((bi,c,i)=>(c[0]-endRef.latitude)**2+(c[1]-endRef.longitude)**2<(flat[bi][0]-endRef.latitude)**2+(flat[bi][1]-endRef.longitude)**2?i:bi,0);
-                pathCoords=flat.slice(Math.min(startIndex,endIndex),Math.max(startIndex,endIndex)+1);
-            }
-        }
-        if(pathCoords.length===0){
-            pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=lastMaxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
-        }
+    if(pathCoords.length>0){
+        polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
+        const allCoords=pathCoords.slice();
+        if(currentEnd)allCoords.push([currentEnd.latitude,currentEnd.longitude]);
+        const bounds=L.latLngBounds(allCoords);
+        map.fitBounds(bounds,{padding:[50,50]});
     }
-    polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
-    const allCoords=pathCoords.slice();
-    if(currentEnd)allCoords.push([currentEnd.latitude,currentEnd.longitude]);
-    const bounds=L.latLngBounds(allCoords);
-    map.fitBounds(bounds,{padding:[50,50]});
     renderFeatures();
 }
 
