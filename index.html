@@ -283,6 +283,7 @@ function drawOverpassCanals(canalsData){
             lineCap:'round',
             lineJoin:'round'
         }).addTo(map);
+        polylineLayer.bringToFront();
         overpassCanalLayers.push(polylineLayer);
         console.log('Drew Leicester Line as single polyline with '+leicesterCoords.length+' segments');
     }
