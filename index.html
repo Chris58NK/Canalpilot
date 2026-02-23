@@ -346,6 +346,35 @@ function addEndMarker(){
     }
 }
 
+function findClosestIndex(coords,lat,lng){
+    let minDist=Infinity,closestIdx=0;
+    const cosLat=Math.cos(lat*Math.PI/180);
+    for(let i=0;i<coords.length;i++){
+        const dlat=coords[i][0]-lat,dlng=(coords[i][1]-lng)*cosLat;
+        const d=dlat*dlat+dlng*dlng;
+        if(d<minDist){minDist=d;closestIdx=i;}
+    }
+    return closestIdx;
+}
+
+function getCanalPathBetween(startLat,startLng,endLat,endLng){
+    let coords=[];
+    if(crtCanalGeometry&&crtCanalGeometry.length>0){
+        coords=crtCanalGeometry;
+    }else if(overpassCanalsData&&overpassCanalsData.byWayId){
+        for(const wayId in overpassCanalsData.byWayId){
+            const canal=overpassCanalsData.byWayId[wayId];
+            if((canal.name||'').toLowerCase().includes('leicester')){coords=canal.coords;break;}
+        }
+        if(coords.length===0&&overpassCanalsData.allCoords)coords=overpassCanalsData.allCoords;
+    }
+    if(coords.length===0)return null;
+    const startIdx=findClosestIndex(coords,startLat,startLng);
+    const endIdx=findClosestIndex(coords,endLat,endLng);
+    if(startIdx<=endIdx)return coords.slice(startIdx,endIdx+1);
+    return coords.slice(endIdx,startIdx+1).reverse();
+}
+
 function updateRoute(){
     if(currentStart&&currentEnd){
         if(routePolyline)map.removeLayer(routePolyline);
@@ -357,9 +386,12 @@ function updateRoute(){
         document.getElementById('routeDist').textContent=dist.toFixed(1);
         document.getElementById('routeDur').textContent=timeStr;
         document.getElementById('routeInfo').style.display='block';
-        const minDist=Math.min(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);
-        const maxDist=Math.max(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);
-        const pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=minDist&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
+        let pathCoords=getCanalPathBetween(currentStart.latitude,currentStart.longitude,currentEnd.latitude,currentEnd.longitude);
+        if(!pathCoords||pathCoords.length<2){
+            const minDist=Math.min(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);
+            const maxDist=Math.max(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);
+            pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=minDist&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
+        }
         routePolyline=L.polyline(pathCoords,{color:'#28a745',weight:4,opacity:0.8}).addTo(map);
     }
 }
@@ -404,25 +436,12 @@ function calculateLookahead(){
     resultDiv.innerHTML=html;
     clearMarkers();
     
-    // Use Overpass canal geometry between start and end points
-    // Use CRT canal geometry if available, otherwise Overpass
-let pathCoords=[];
-if(crtCanalGeometry&&crtCanalGeometry.length>0){
-    pathCoords=crtCanalGeometry;
-}else if(overpassCanalsData&&overpassCanalsData.byWayId){
-    // Find the Leicester Line way from Overpass
-    for(const wayId in overpassCanalsData.byWayId){
-        const canal=overpassCanalsData.byWayId[wayId];
-        if(canal.name.toLowerCase().includes('leicester')){
-            pathCoords=canal.coords;
-            break;
-        }
+    const endFeature=features[features.length-1];
+    let pathCoords=getCanalPathBetween(currentStart.latitude,currentStart.longitude,endFeature.latitude,endFeature.longitude);
+    if(!pathCoords||pathCoords.length<2){
+        pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
     }
-}
-if(pathCoords.length===0){
-    pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
-}
-polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
+    polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
     
     features.forEach(f=>{
         const colors={lock:'#ff6b6b',bridge:'#4ecdc4',marina:'#45b7d1',wharf:'#96ceb4',water:'#3498db',tunnel:'#95a5a6',junction:'#667eea'};
