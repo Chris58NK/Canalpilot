@@ -122,6 +122,7 @@ let crtCanalGeometry=null;
 let crtCanalLayer=null;
 let overpassCanalLayers=[];
 let overpassCanalsData=null;
+let leicesterCoords=[];
 let lastAllFeatures=[];
 let lastMaxDist=0;
 let activeFilters=new Set(['lock','bridge','marina','wharf','winding_hole','water','aqueduct','tunnel','junction']);
@@ -254,7 +255,7 @@ async function fetchOverpassAllCanals(){
 
 function drawOverpassCanals(canalsData){
     if(!canalsData||!canalsData.byWayId)return;
-    const leicesterCoords=[];
+    leicesterCoords=[];
     Object.keys(canalsData.byWayId).forEach(wayId=>{
         const canal=canalsData.byWayId[wayId];
         if(canal.coords.length>0){
@@ -471,7 +472,19 @@ function calculateLookahead(){
         }
     }
     if(pathCoords.length===0){
-        pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=lastMaxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
+        if(leicesterCoords.length>0){
+            const flat=leicesterCoords.flat();
+            if(flat.length>0){
+                const endFeats=testCorridor.features.filter(f=>f.cumulativeDistance<=lastMaxDist).sort((a,b)=>b.cumulativeDistance-a.cumulativeDistance);
+                const endRef=endFeats.length>0?endFeats[0]:currentStart;
+                const startIndex=flat.reduce((bi,c,i)=>(c[0]-currentStart.latitude)**2+(c[1]-currentStart.longitude)**2<(flat[bi][0]-currentStart.latitude)**2+(flat[bi][1]-currentStart.longitude)**2?i:bi,0);
+                const endIndex=flat.reduce((bi,c,i)=>(c[0]-endRef.latitude)**2+(c[1]-endRef.longitude)**2<(flat[bi][0]-endRef.latitude)**2+(flat[bi][1]-endRef.longitude)**2?i:bi,0);
+                pathCoords=flat.slice(Math.min(startIndex,endIndex),Math.max(startIndex,endIndex)+1);
+            }
+        }
+        if(pathCoords.length===0){
+            pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=lastMaxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
+        }
     }
     polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
     const allCoords=pathCoords.slice();
