@@ -52,6 +52,7 @@ button:hover{background-color:#0056b3}
 .filter-links a{color:#007BFF;cursor:pointer;text-decoration:underline}
 .empty-state{text-align:center;padding:30px 10px;color:#999}
 .route-info{background:#e8f5e9;padding:10px;border-radius:5px;margin:10px 0;border-left:4px solid #28a745;font-size:12px}
+.route-warning{background:#fff4e5;padding:10px;border-radius:5px;margin:10px 0;border-left:4px solid #d97706;font-size:12px;color:#92400e}
 .search-container{position:relative}
 @media (max-width:1200px){
   .container{grid-template-columns:1fr 1fr}
@@ -82,6 +83,7 @@ button:hover{background-color:#0056b3}
 <div id="endBadge" class="selected-badge"></div>
 </div>
 <div id="routeInfo" class="route-info" style="display:none">Distance: <strong id="routeDist">0</strong> mi | Duration: <strong id="routeDur">0</strong></div>
+<div id="routeWarning" class="route-warning" style="display:none"></div>
 <h2>Calculate</h2>
 <div class="input-group">
 <label>Speed (mph):</label>
@@ -136,6 +138,17 @@ let crtCanalGeometry=null;
 let crtCanalLayer=null;
 let overpassCanalLayers=[];
 let overpassCanalsData=null;
+let cachedOverpassCanals=null;
+
+const BASE_BBOX={south:52.28,west:-1.18,north:52.66,east:-0.97};
+const BBOX_BUFFER=0.01;
+const BBOX={
+    south:BASE_BBOX.south-BBOX_BUFFER,
+    west:BASE_BBOX.west-BBOX_BUFFER,
+    north:BASE_BBOX.north+BBOX_BUFFER,
+    east:BASE_BBOX.east+BBOX_BUFFER
+};
+const BBOX_STR=`${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
 
 const CRT_ENDPOINTS=[
     'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
@@ -200,68 +213,82 @@ async function fetchCRTCanalGeometry(){
 async function fetchOverpassCanalData(){
     if(overpassCanalsData)return overpassCanalsData;
     try{
-        const overpassQuery='[out:json][timeout:25];(way["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](52.28,-1.18,52.66,-0.97);relation["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](52.28,-1.18,52.66,-0.97););out geom;';
+        const overpassQuery=`[out:json][timeout:25];(relation["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR});way(r);way["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR}););out body;>;out geom;`;
         const overpassUrl='https://overpass-api.de/api/interpreter';
+        console.log('Overpass request bbox',BBOX_STR);
         const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});
         console.log('Overpass Response:',{status:response.status,timestamp:new Date().toISOString()});
         if(!response.ok)throw new Error('HTTP '+response.status);
         const data=await response.json();
-        if(data.elements&&data.elements.length>0){
-            overpassCanalsData={byWayId:{},allCoords:[]};
-            data.elements.forEach(el=>{
-                if(el.geometry&&el.geometry.length>0){
-                    const wayId=el.id;
-                    if(!overpassCanalsData.byWayId[wayId]){
-                        overpassCanalsData.byWayId[wayId]={name:el.tags?.name||'Canal '+wayId,coords:[]};
-                    }
-                    el.geometry.forEach(pt=>{
-                        overpassCanalsData.byWayId[wayId].coords.push([pt.lat,pt.lon]);
-                    });
-                }
-            });
-            overpassCanalsData.allCoords=buildOrderedCanalPath(overpassCanalsData.byWayId);
-            console.log('Overpass: Loaded '+overpassCanalsData.allCoords.length+' total coordinates across '+Object.keys(overpassCanalsData.byWayId).length+' canals');
+        if(!data.elements||data.elements.length===0){throw new Error('Empty response');}
+        overpassCanalsData=parseOverpassElements(data,'Overpass Leicester Line');
+        if(overpassCanalsData.allCoords.length>0){
+            cachedOverpassCanals=overpassCanalsData;
             return overpassCanalsData;
         }
-        throw new Error('No Leicester Line geometry found');
+        throw new Error('Parsed Leicester Line geometry had no path');
     }catch(e){
-        console.warn('Overpass Leicester Line fetch failed:',e.message,'- falling back to all canals');
+        console.warn('Overpass Leicester Line fetch failed:',{reason:e.message||e});
         return fetchOverpassAllCanals();
     }
 }
 
 async function fetchOverpassAllCanals(){
     try{
-        const overpassQuery='[out:json][timeout:25];(way["waterway"="canal"](52.28,-1.18,52.66,-0.97);relation["waterway"="canal"](52.28,-1.18,52.66,-0.97););out geom;';
+        const overpassQuery=`[out:json][timeout:25];(relation["waterway"="canal"](${BBOX_STR});way(r);way["waterway"="canal"](${BBOX_STR}););out body;>;out geom;`;
         const overpassUrl='https://overpass-api.de/api/interpreter';
+        console.log('Overpass request bbox',BBOX_STR);
         const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});
         if(!response.ok)throw new Error('HTTP '+response.status);
         const data=await response.json();
-        const canalsData={byWayId:{},allCoords:[]};
-        if(data.elements){
-            data.elements.forEach(el=>{
-                if(el.geometry&&el.geometry.length>0){
-                    const wayId=el.id;
-                    if(!canalsData.byWayId[wayId]){
-                        canalsData.byWayId[wayId]={name:el.tags?.name||'Canal '+wayId,coords:[]};
-                    }
-                    el.geometry.forEach(pt=>{
-                        const coord=[pt.lat,pt.lon];
-                        canalsData.byWayId[wayId].coords.push(coord);
-                        canalsData.allCoords.push(coord);
-                    });
-                }
-            });
-        }
+        const canalsData=parseOverpassElements(data,'Overpass All Canals');
         if(canalsData.allCoords.length>0){
-            console.log('Overpass: Loaded '+canalsData.allCoords.length+' coordinates for all canals across '+Object.keys(canalsData.byWayId).length+' canals');
+            cachedOverpassCanals=canalsData;
             return canalsData;
+        }
+        if(cachedOverpassCanals){
+            console.warn('Overpass all canals empty, reusing cached geometry');
+            return cachedOverpassCanals;
         }
         return null;
     }catch(e){
-        console.warn('Overpass all canals fetch failed:',e.message);
+        console.warn('Overpass all canals fetch failed:',{reason:e.message||e});
+        if(cachedOverpassCanals){
+            console.warn('Reusing cached geometry after error');
+            return cachedOverpassCanals;
+        }
         return null;
     }
+}
+
+function parseOverpassElements(data,label){
+    const result={byWayId:{},allCoords:[]};
+    let wayCount=0,relationCount=0,pointCount=0;
+    try{
+        if(!data||!data.elements){
+            console.warn(label+' parse failure',{reason:'No elements'});
+            return result;
+        }
+        data.elements.forEach(el=>{
+            if(el.type==='relation')relationCount++;
+            if(el.type==='way'){
+                wayCount++;
+                if(el.geometry&&el.geometry.length>0){
+                    const coords=el.geometry.map(pt=>[pt.lat,pt.lon]);
+                    result.byWayId[el.id]={name:el.tags?.name||'Canal '+el.id,coords};
+                    pointCount+=coords.length;
+                }
+            }
+        });
+        result.allCoords=buildOrderedCanalPath(result.byWayId);
+        console.log(label+' parse summary',{ways:wayCount,relations:relationCount,totalPoints:pointCount,pathPoints:result.allCoords.length,hasPath:result.allCoords.length>0});
+        if(result.allCoords.length===0){
+            console.warn(label+' parse produced no path',{ways:wayCount,relations:relationCount,totalPoints:pointCount});
+        }
+    }catch(err){
+        console.warn(label+' parse failure',{reason:err.message});
+    }
+    return result;
 }
 
 function drawOverpassCanals(canalsData){
@@ -409,15 +436,19 @@ function buildOrderedCanalPath(byWayId){
     return orderedWays.flatMap(way=>way.coords);
 }
 
-function getCanalPathBetween(startLat,startLng,endLat,endLng){
-    let coords=[];
-    if(crtCanalGeometry&&crtCanalGeometry.length>0){
-        coords=crtCanalGeometry;
-    }else if(overpassCanalsData&&overpassCanalsData.allCoords&&overpassCanalsData.allCoords.length>0){
-        coords=overpassCanalsData.allCoords;
+function getPrimaryCanalCoords(){
+    if(crtCanalGeometry&&crtCanalGeometry.length>1)return crtCanalGeometry;
+    if(overpassCanalsData&&overpassCanalsData.allCoords&&overpassCanalsData.allCoords.length>1)return overpassCanalsData.allCoords;
+    if(cachedOverpassCanals&&cachedOverpassCanals.allCoords&&cachedOverpassCanals.allCoords.length>1){
+        console.log('Reusing cached Overpass geometry');
+        return cachedOverpassCanals.allCoords;
     }
-    if(coords.length===0){coords=testCorridor.features.slice().sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);}
-    if(coords.length===0)return null;
+    return [];
+}
+
+function getCanalPathBetween(startLat,startLng,endLat,endLng){
+    const coords=getPrimaryCanalCoords();
+    if(!coords||coords.length<2)return null;
     const startIdx=findClosestIndex(coords,startLat,startLng);
     const endIdx=findClosestIndex(coords,endLat,endLng);
     if(startIdx<=endIdx)return coords.slice(startIdx,endIdx+1);
@@ -435,11 +466,20 @@ function updateRoute(){
         document.getElementById('routeDist').textContent=dist.toFixed(1);
         document.getElementById('routeDur').textContent=timeStr;
         document.getElementById('routeInfo').style.display='block';
+        const warning=document.getElementById('routeWarning');
+        warning.style.display='none';
         let pathCoords=getCanalPathBetween(currentStart.latitude,currentStart.longitude,currentEnd.latitude,currentEnd.longitude);
         if(!pathCoords||pathCoords.length<2){
             const minDist=Math.min(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);
             const maxDist=Math.max(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);
             pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=minDist&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
+            if(pathCoords.length<2){
+                console.warn('Route fallback failed to build path, geometry unavailable');
+            }
+            warning.textContent='Using fallback route (geometry unavailable).';
+            warning.style.display='block';
+        }else{
+            console.log('Route path built with',pathCoords.length,'points');
         }
         routePolyline=L.polyline(pathCoords,{color:'#28a745',weight:4,opacity:0.8}).addTo(map);
     }
@@ -450,6 +490,7 @@ function calculateLookahead(){
         alert('Select a start point');
         return;
     }
+    document.getElementById('routeWarning').style.display='none';
     const speed=parseFloat(document.getElementById('speed').value);
     const hours=parseFloat(document.getElementById('lookahead').value);
     const distance=speed*hours;
@@ -488,9 +529,14 @@ function calculateLookahead(){
     
     const allFeaturesInWindow=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
     const routeEnd=allFeaturesInWindow.length>0?allFeaturesInWindow[allFeaturesInWindow.length-1]:(features.length>0?features[features.length-1]:null);
+    const warning=document.getElementById('routeWarning');
     let pathCoords=routeEnd?getCanalPathBetween(currentStart.latitude,currentStart.longitude,routeEnd.latitude,routeEnd.longitude):null;
     if(!pathCoords||pathCoords.length<2){
         pathCoords=allFeaturesInWindow.length>0?allFeaturesInWindow.map(f=>[f.latitude,f.longitude]):[];
+        warning.textContent='Using fallback route (geometry unavailable).';
+        warning.style.display='block';
+    }else{
+        warning.style.display='none';
     }
     polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
     
@@ -525,6 +571,7 @@ function resetForm(){
     document.getElementById('lookahead').value='2';
     document.getElementById('results').innerHTML='<div class="empty-state">Select start point and click Calculate</div>';
     document.getElementById('routeInfo').style.display='none';
+    document.getElementById('routeWarning').style.display='none';
     currentStart=null;
     currentEnd=null;
     clearMarkers();

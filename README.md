@@ -1,7 +1,6 @@
-# This is a revert commit to restore previous state
+# CanalPilot
 
-# Placeholder for code restored from commit 4fbfde3a938161f7525f48d27992687b617459e9
+Key acceptance checks (verify via the UI search boxes):
 
-## Complete working CanalPilot application
-
-# Add appropriate code here as necessary.
+- Norton Junction → Foxton Junction: route polyline stays on-canal even when varying speed/lookahead.
+- North Kilworth Marina → Foxton Junction: route polyline stays on-canal and does not flip to a straight line unless Overpass/CRT are unavailable.
