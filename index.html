@@ -151,6 +151,7 @@ const BBOX={
 };
 const BBOX_STR=`${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
 const SEGMENT_ATTACH_LIMIT_METERS=400;
+const MIN_SEGMENT_POINTS=2;
 
 const CRT_ENDPOINTS=[
     'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
@@ -419,7 +420,7 @@ function haversineDistanceMeters(a,b){
 }
 
 /** Split coordinates into segments whenever consecutive points jump over maxJumpMeters. */
-function splitOnJumps(coords,maxJumpMeters=400){
+function splitOnJumps(coords,maxJumpMeters=SEGMENT_ATTACH_LIMIT_METERS){
     if(!coords||coords.length===0)return [];
     const segments=[];
     let current=[coords[0]];
@@ -433,7 +434,7 @@ function splitOnJumps(coords,maxJumpMeters=400){
         }
     }
     if(current.length)segments.push(current);
-    return segments.filter(s=>s.length>1);
+    return segments.filter(s=>s.length>=MIN_SEGMENT_POINTS);
 }
 
 function findClosestIndex(coords,lat,lng){
