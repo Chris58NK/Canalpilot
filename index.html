@@ -436,7 +436,30 @@ function buildOrderedCanalPath(byWayId){
         return{coords,sortKey:getCoordCanalDist(coords[0])};
     });
     orderedWays.sort((a,b)=>a.sortKey-b.sortKey);
-    return orderedWays.flatMap(way=>way.coords);
+    const stitched=[];
+    orderedWays.forEach(way=>{
+        let segmentCoords=way.coords; // reversed if needed to maintain path continuity
+        if(stitched.length>0&&segmentCoords.length>0){
+            const prev=stitched[stitched.length-1];
+            const distToSegmentStart=distanceSq(prev,segmentCoords[0]);
+            const distToSegmentEnd=distanceSq(prev,segmentCoords[segmentCoords.length-1]);
+            const shouldReverse=distToSegmentEnd<distToSegmentStart;
+            if(shouldReverse)segmentCoords=segmentCoords.slice().reverse();
+        }
+        stitched.push(...segmentCoords);
+    });
+    return stitched;
+}
+
+/**
+ * Returns cosine-corrected planar squared distance between two [lat, lon] coords in decimal degrees.
+ * Result is squared degrees (not meters) and only intended for short-distance ordering checks.
+ */
+function distanceSq(a,b){
+    // Small-distance planar approximation for ordering continuity
+    const dLat=a[0]-b[0];
+    const dLon=(a[1]-b[1])*Math.cos(((a[0]+b[0])/2)*Math.PI/180);
+    return dLat*dLat+dLon*dLon;
 }
 
 function getPrimaryCanalCoords(){
