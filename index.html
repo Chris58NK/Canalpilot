@@ -150,7 +150,7 @@ const BBOX={
     east:BASE_BBOX.east+BBOX_BUFFER
 };
 const BBOX_STR=`${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
-const SEGMENT_ATTACH_LIMIT_M=500;
+const SEGMENT_ATTACH_LIMIT_METERS=400;
 
 const CRT_ENDPOINTS=[
     'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
@@ -418,14 +418,14 @@ function haversineDistanceMeters(a,b){
     return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
 }
 
-/** Split coordinates into segments whenever consecutive points jump over maxJumpM meters. */
-function splitOnJumps(coords,maxJumpM=400){
+/** Split coordinates into segments whenever consecutive points jump over maxJumpMeters. */
+function splitOnJumps(coords,maxJumpMeters=400){
     if(!coords||coords.length===0)return [];
     const segments=[];
     let current=[coords[0]];
     for(let i=1;i<coords.length;i++){
         const d=haversineDistanceMeters(coords[i-1],coords[i]);
-        if(d>maxJumpM){
+        if(d>maxJumpMeters){
             segments.push(current);
             current=[coords[i]];
         }else{
@@ -503,7 +503,7 @@ function getCanalPathBetween(startLat,startLng,endLat,endLng){
         const startDist=haversineDistanceMeters(startPt,[startLat,startLng]);
         const endDist=haversineDistanceMeters(endPt,[endLat,endLng]);
         const score=startDist+endDist;
-        if(score<bestScore&&startDist<=SEGMENT_ATTACH_LIMIT_M&&endDist<=SEGMENT_ATTACH_LIMIT_M){
+        if(score<bestScore&&startDist<=SEGMENT_ATTACH_LIMIT_METERS&&endDist<=SEGMENT_ATTACH_LIMIT_METERS){
             bestScore=score;
             bestPath=startIdx<=endIdx?seg.slice(startIdx,endIdx+1):seg.slice(endIdx,startIdx+1).reverse();
         }
