@@ -150,6 +150,7 @@ const BBOX={
     east:BASE_BBOX.east+BBOX_BUFFER
 };
 const BBOX_STR=`${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
+const SEGMENT_ATTACH_LIMIT_M=500;
 
 const CRT_ENDPOINTS=[
     'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
@@ -407,7 +408,7 @@ function addEndMarker(){
     }
 }
 
-function haversineMeters(a,b){
+function haversineDistanceMeters(a,b){
     const R=6371000,toRad=v=>v*Math.PI/180;
     const dLat=toRad(b[0]-a[0]),dLon=toRad(b[1]-a[1]);
     const lat1=toRad(a[0]),lat2=toRad(b[0]);
@@ -421,7 +422,7 @@ function splitOnJumps(coords,maxJumpM=400){
     const segments=[];
     let current=[coords[0]];
     for(let i=1;i<coords.length;i++){
-        const d=haversineMeters(coords[i-1],coords[i]);
+        const d=haversineDistanceMeters(coords[i-1],coords[i]);
         if(d>maxJumpM){
             segments.push(current);
             current=[coords[i]];
@@ -490,17 +491,16 @@ function getPrimaryCanalSegments(){
 function getCanalPathBetween(startLat,startLng,endLat,endLng){
     const segments=getPrimaryCanalSegments();
     if(segments.length===0)return null;
-    const attachLimitM=500;
     let bestPath=null,bestScore=Infinity;
     segments.forEach(seg=>{
         if(!seg||seg.length<2)return;
         const startIdx=findClosestIndex(seg,startLat,startLng);
         const endIdx=findClosestIndex(seg,endLat,endLng);
         const startPt=seg[startIdx],endPt=seg[endIdx];
-        const startDist=haversineMeters(startPt,[startLat,startLng]);
-        const endDist=haversineMeters(endPt,[endLat,endLng]);
+        const startDist=haversineDistanceMeters(startPt,[startLat,startLng]);
+        const endDist=haversineDistanceMeters(endPt,[endLat,endLng]);
         const score=startDist+endDist;
-        if(score<bestScore&&startDist<=attachLimitM&&endDist<=attachLimitM){
+        if(score<bestScore&&startDist<=SEGMENT_ATTACH_LIMIT_M&&endDist<=SEGMENT_ATTACH_LIMIT_M){
             bestScore=score;
             bestPath=startIdx<=endIdx?seg.slice(startIdx,endIdx+1):seg.slice(endIdx,startIdx+1).reverse();
         }
