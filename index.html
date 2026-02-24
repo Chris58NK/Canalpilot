@@ -302,7 +302,9 @@ async function initMap(){
         drawOverpassCanals(canalsData);
         return;
     }
-    console.warn('Both CRT and Overpass failed, no base layer drawn');
+    console.warn('Both CRT and Overpass failed, drawing canal from testCorridor features');
+    const fallbackCoords=testCorridor.features.slice().sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
+    if(fallbackCoords.length>0){crtCanalLayer=L.polyline(fallbackCoords,{color:'#4a90d9',weight:3,opacity:0.7}).addTo(map);}
 }
 
 function setupSearch(inputId,resultsId,badgeId,type){
@@ -390,6 +392,7 @@ function getCanalPathBetween(startLat,startLng,endLat,endLng){
         }
         if(coords.length===0&&overpassCanalsData.allCoords)coords=overpassCanalsData.allCoords;
     }
+    if(coords.length===0){coords=testCorridor.features.slice().sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);}
     if(coords.length===0)return null;
     const startIdx=findClosestIndex(coords,startLat,startLng);
     const endIdx=findClosestIndex(coords,endLat,endLng);
@@ -459,10 +462,11 @@ function calculateLookahead(){
     resultDiv.innerHTML=html;
     clearMarkers();
     
-    const endFeature=features[features.length-1];
-    let pathCoords=getCanalPathBetween(currentStart.latitude,currentStart.longitude,endFeature.latitude,endFeature.longitude);
+    const allFeaturesInWindow=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
+    const routeEnd=allFeaturesInWindow.length>0?allFeaturesInWindow[allFeaturesInWindow.length-1]:(features.length>0?features[features.length-1]:null);
+    let pathCoords=routeEnd?getCanalPathBetween(currentStart.latitude,currentStart.longitude,routeEnd.latitude,routeEnd.longitude):null;
     if(!pathCoords||pathCoords.length<2){
-        pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
+        pathCoords=allFeaturesInWindow.length>0?allFeaturesInWindow.map(f=>[f.latitude,f.longitude]):[];
     }
     polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
     
