@@ -421,20 +421,20 @@ function haversineDistanceMeters(a,b){
 
 /** Split coordinates into segments whenever consecutive points jump over maxJumpMeters. */
 function splitOnJumps(coords,maxJumpMeters=SEGMENT_ATTACH_LIMIT_METERS){
-    if(!coords||coords.length===0)return [];
+    if(!coords?.length)return [];
     const segments=[];
     let current=[coords[0]];
     for(let i=1;i<coords.length;i++){
         const d=haversineDistanceMeters(coords[i-1],coords[i]);
         if(d>maxJumpMeters){
-            segments.push(current);
+            if(current.length>=MIN_SEGMENT_POINTS)segments.push(current);
             current=[coords[i]];
         }else{
             current.push(coords[i]);
         }
     }
-    if(current.length)segments.push(current);
-    return segments.filter(s=>s.length>=MIN_SEGMENT_POINTS);
+    if(current.length>=MIN_SEGMENT_POINTS)segments.push(current);
+    return segments;
 }
 
 function findClosestIndex(coords,lat,lng){
