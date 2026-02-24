@@ -140,6 +140,7 @@ let overpassCanalLayers=[];
 let overpassCanalsData=null;
 let cachedOverpassCanals=null;
 
+// Leicester Line corridor (Norton to Foxton) bbox
 const BASE_BBOX={south:52.28,west:-1.18,north:52.66,east:-0.97};
 const BBOX_BUFFER=0.01;
 const BBOX={
@@ -270,7 +271,9 @@ function parseOverpassElements(data,label){
             return result;
         }
         data.elements.forEach(el=>{
-            if(el.type==='relation')relationCount++;
+            if(el.type==='relation'){
+                relationCount++;
+            }
             if(el.type==='way'){
                 wayCount++;
                 if(el.geometry&&el.geometry.length>0){
