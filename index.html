@@ -167,18 +167,21 @@ async function fetchCRTCanalGeometry(){
                 console.log('CRT WFS Response:',{status:response.status,features:data.features?.length||0,timestamp:new Date().toISOString()});
                 if(data.error){console.warn('CRT WFS: API error',data.error.message||JSON.stringify(data.error));continue;}
                 if(data.features&&data.features.length>0){
-                    const coords=[];
-                    data.features.forEach(feat=>{
+                    const wayMap={};
+                    data.features.forEach((feat,idx)=>{
                         if(feat.geometry&&feat.geometry.coordinates){
                             if(feat.geometry.type==='LineString'||feat.geometry.type==='MultiLineString'){
                                 const lines=feat.geometry.type==='MultiLineString'?feat.geometry.coordinates:[feat.geometry.coordinates];
-                                lines.forEach(line=>line.forEach(c=>coords.push([c[1],c[0]])));
+                                lines.forEach((line,lineIdx)=>{
+                                    wayMap[idx+'_'+lineIdx]={coords:line.map(c=>[c[1],c[0]])};
+                                });
                             }
                         }
                     });
-                    if(coords.length>0){
-                        crtCanalGeometry=coords;
-                        console.log('CRT WFS: Loaded '+coords.length+' coordinates for Leicester Line');
+                    const ordered=buildOrderedCanalPath(wayMap);
+                    if(ordered.length>0){
+                        crtCanalGeometry=ordered;
+                        console.log('CRT WFS: Loaded '+ordered.length+' coordinates for Leicester Line');
                         return crtCanalGeometry;
                     }
                     console.warn('CRT WFS: Got',data.features.length,'features but no valid geometry');
@@ -197,7 +200,7 @@ async function fetchCRTCanalGeometry(){
 async function fetchOverpassCanalData(){
     if(overpassCanalsData)return overpassCanalsData;
     try{
-        const overpassQuery='[out:json][timeout:25];(way["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](52.4,-1.25,52.7,-0.9);relation["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](52.4,-1.25,52.7,-0.9););out geom;';
+        const overpassQuery='[out:json][timeout:25];(way["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](52.28,-1.18,52.66,-0.97);relation["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](52.28,-1.18,52.66,-0.97););out geom;';
         const overpassUrl='https://overpass-api.de/api/interpreter';
         const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});
         console.log('Overpass Response:',{status:response.status,timestamp:new Date().toISOString()});
@@ -212,12 +215,11 @@ async function fetchOverpassCanalData(){
                         overpassCanalsData.byWayId[wayId]={name:el.tags?.name||'Canal '+wayId,coords:[]};
                     }
                     el.geometry.forEach(pt=>{
-                        const coord=[pt.lat,pt.lon];
-                        overpassCanalsData.byWayId[wayId].coords.push(coord);
-                        overpassCanalsData.allCoords.push(coord);
+                        overpassCanalsData.byWayId[wayId].coords.push([pt.lat,pt.lon]);
                     });
                 }
             });
+            overpassCanalsData.allCoords=buildOrderedCanalPath(overpassCanalsData.byWayId);
             console.log('Overpass: Loaded '+overpassCanalsData.allCoords.length+' total coordinates across '+Object.keys(overpassCanalsData.byWayId).length+' canals');
             return overpassCanalsData;
         }
@@ -230,7 +232,7 @@ async function fetchOverpassCanalData(){
 
 async function fetchOverpassAllCanals(){
     try{
-        const overpassQuery='[out:json][timeout:25];(way["waterway"="canal"](52.4,-1.25,52.7,-0.9);relation["waterway"="canal"](52.4,-1.25,52.7,-0.9););out geom;';
+        const overpassQuery='[out:json][timeout:25];(way["waterway"="canal"](52.28,-1.18,52.66,-0.97);relation["waterway"="canal"](52.28,-1.18,52.66,-0.97););out geom;';
         const overpassUrl='https://overpass-api.de/api/interpreter';
         const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});
         if(!response.ok)throw new Error('HTTP '+response.status);
@@ -381,16 +383,38 @@ function findClosestIndex(coords,lat,lng){
     return closestIdx;
 }
 
+function getCoordCanalDist(coord){
+    const refFeatures=testCorridor.features;
+    if(!refFeatures||refFeatures.length===0)return 0;
+    let minD=Infinity,best=refFeatures[0];
+    const cosLat=Math.cos(coord[0]*Math.PI/180);
+    for(const f of refFeatures){
+        const dlat=f.latitude-coord[0],dlng=(f.longitude-coord[1])*cosLat;
+        const d=dlat*dlat+dlng*dlng;
+        if(d<minD){minD=d;best=f;}
+    }
+    return best.cumulativeDistance;
+}
+
+function buildOrderedCanalPath(byWayId){
+    const ways=Object.values(byWayId).filter(w=>w.coords&&w.coords.length>0);
+    const orderedWays=ways.map(way=>{
+        const coords=way.coords.slice();
+        const firstDist=getCoordCanalDist(coords[0]);
+        const lastDist=getCoordCanalDist(coords[coords.length-1]);
+        if(firstDist>lastDist)coords.reverse();
+        return{coords,sortKey:getCoordCanalDist(coords[0])};
+    });
+    orderedWays.sort((a,b)=>a.sortKey-b.sortKey);
+    return orderedWays.flatMap(way=>way.coords);
+}
+
 function getCanalPathBetween(startLat,startLng,endLat,endLng){
     let coords=[];
     if(crtCanalGeometry&&crtCanalGeometry.length>0){
         coords=crtCanalGeometry;
-    }else if(overpassCanalsData&&overpassCanalsData.byWayId){
-        for(const wayId in overpassCanalsData.byWayId){
-            const canal=overpassCanalsData.byWayId[wayId];
-            if((canal.name||'').toLowerCase().includes('leicester')){coords=canal.coords;break;}
-        }
-        if(coords.length===0&&overpassCanalsData.allCoords)coords=overpassCanalsData.allCoords;
+    }else if(overpassCanalsData&&overpassCanalsData.allCoords&&overpassCanalsData.allCoords.length>0){
+        coords=overpassCanalsData.allCoords;
     }
     if(coords.length===0){coords=testCorridor.features.slice().sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);}
     if(coords.length===0)return null;
