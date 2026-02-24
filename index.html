@@ -150,6 +150,9 @@ const BBOX={
     east:BASE_BBOX.east+BBOX_BUFFER
 };
 const BBOX_STR=`${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
+const SEGMENT_ATTACH_LIMIT_METERS=400;
+const MIN_SEGMENT_POINTS=2;
+const DEG_TO_RAD=Math.PI/180;
 
 const CRT_ENDPOINTS=[
     'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
@@ -325,7 +328,12 @@ async function initMap(){
     const crtCoords=await fetchCRTCanalGeometry();
     if(crtCoords){
         console.log('Using CRT canal geometry');
-        crtCanalLayer=L.polyline(crtCoords,{color:'#4a90d9',weight:3,opacity:0.7}).addTo(map);
+        const segments=splitOnJumps(crtCoords);
+        if(segments.length>0){
+            crtCanalLayer=L.layerGroup(segments.map(seg=>L.polyline(seg,{color:'#4a90d9',weight:3,opacity:0.7}))).addTo(map);
+        }else{
+            crtCanalLayer=L.polyline(crtCoords,{color:'#4a90d9',weight:3,opacity:0.7}).addTo(map);
+        }
         return;
     }
     const canalsData=await fetchOverpassCanalData();
@@ -402,9 +410,38 @@ function addEndMarker(){
     }
 }
 
+/** Calculate haversine distance between two [lat,lng] points in meters. */
+function haversineDistanceMeters(a,b){
+    const R=6371000,toRad=v=>v*DEG_TO_RAD;
+    const dLat=toRad(b[0]-a[0]),dLon=toRad(b[1]-a[1]);
+    const lat1=toRad(a[0]),lat2=toRad(b[0]);
+    const sinLat=Math.sin(dLat/2),sinLon=Math.sin(dLon/2);
+    const h=sinLat*sinLat+Math.cos(lat1)*Math.cos(lat2)*sinLon*sinLon;
+    const sinHalfCentralAngle=Math.max(0,Math.min(1,Math.sqrt(h)));
+    return 2*R*Math.asin(sinHalfCentralAngle);
+}
+
+/** Split coordinates into segments whenever consecutive points jump over maxJumpMeters. */
+function splitOnJumps(coords,maxJumpMeters=SEGMENT_ATTACH_LIMIT_METERS){
+    if(!coords?.length)return [];
+    const segments=[];
+    let current=[coords[0]];
+    for(let i=1;i<coords.length;i++){
+        const d=haversineDistanceMeters(coords[i-1],coords[i]);
+        if(d>maxJumpMeters){
+            if(current.length>=MIN_SEGMENT_POINTS)segments.push(current);
+            current=[coords[i]];
+        }else{
+            current.push(coords[i]);
+        }
+    }
+    if(current.length>=MIN_SEGMENT_POINTS)segments.push(current);
+    return segments;
+}
+
 function findClosestIndex(coords,lat,lng){
     let minDist=Infinity,closestIdx=0;
-    const cosLat=Math.cos(lat*Math.PI/180);
+    const cosLat=Math.cos(lat*DEG_TO_RAD);
     for(let i=0;i<coords.length;i++){
         const dlat=coords[i][0]-lat,dlng=(coords[i][1]-lng)*cosLat;
         const d=dlat*dlat+dlng*dlng;
@@ -417,7 +454,7 @@ function getCoordCanalDist(coord){
     const refFeatures=testCorridor.features;
     if(!refFeatures||refFeatures.length===0)return 0;
     let minD=Infinity,best=refFeatures[0];
-    const cosLat=Math.cos(coord[0]*Math.PI/180);
+    const cosLat=Math.cos(coord[0]*DEG_TO_RAD);
     for(const f of refFeatures){
         const dlat=f.latitude-coord[0],dlng=(f.longitude-coord[1])*cosLat;
         const d=dlat*dlat+dlng*dlng;
@@ -449,13 +486,33 @@ function getPrimaryCanalCoords(){
     return [];
 }
 
-function getCanalPathBetween(startLat,startLng,endLat,endLng){
+/** Return primary canal geometry split into contiguous segments. */
+function getPrimaryCanalSegments(){
     const coords=getPrimaryCanalCoords();
-    if(!coords||coords.length<2)return null;
-    const startIdx=findClosestIndex(coords,startLat,startLng);
-    const endIdx=findClosestIndex(coords,endLat,endLng);
-    if(startIdx<=endIdx)return coords.slice(startIdx,endIdx+1);
-    return coords.slice(endIdx,startIdx+1).reverse();
+    const segments=splitOnJumps(coords);
+    if(segments.length>0)return segments;
+    if(coords&&coords.length>1)return[coords];
+    return [];
+}
+
+function getCanalPathBetween(startLat,startLng,endLat,endLng){
+    const segments=getPrimaryCanalSegments();
+    if(segments.length===0)return null;
+    let bestPath=null,bestScore=Infinity;
+    segments.forEach(seg=>{
+        if(!seg||seg.length<2)return;
+        const startIdx=findClosestIndex(seg,startLat,startLng);
+        const endIdx=findClosestIndex(seg,endLat,endLng);
+        const startPt=seg[startIdx],endPt=seg[endIdx];
+        const startDist=haversineDistanceMeters(startPt,[startLat,startLng]);
+        const endDist=haversineDistanceMeters(endPt,[endLat,endLng]);
+        const score=startDist+endDist;
+        if(score<bestScore&&startDist<=SEGMENT_ATTACH_LIMIT_METERS&&endDist<=SEGMENT_ATTACH_LIMIT_METERS){
+            bestScore=score;
+            bestPath=startIdx<=endIdx?seg.slice(startIdx,endIdx+1):seg.slice(endIdx,startIdx+1).reverse();
+        }
+    });
+    return bestPath;
 }
 
 function updateRoute(){
