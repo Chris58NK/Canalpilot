@@ -408,6 +408,7 @@ function addEndMarker(){
     }
 }
 
+/** Calculate haversine distance between two [lat,lng] points in meters. */
 function haversineDistanceMeters(a,b){
     const R=6371000,toRad=v=>v*Math.PI/180;
     const dLat=toRad(b[0]-a[0]),dLon=toRad(b[1]-a[1]);
@@ -417,6 +418,7 @@ function haversineDistanceMeters(a,b){
     return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
 }
 
+/** Split coordinates into segments whenever consecutive points jump over maxJumpM meters. */
 function splitOnJumps(coords,maxJumpM=400){
     if(!coords||coords.length===0)return [];
     const segments=[];
@@ -481,6 +483,7 @@ function getPrimaryCanalCoords(){
     return [];
 }
 
+/** Return primary canal geometry split into contiguous segments. */
 function getPrimaryCanalSegments(){
     const coords=getPrimaryCanalCoords();
     const segments=splitOnJumps(coords);
