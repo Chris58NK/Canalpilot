@@ -496,23 +496,12 @@ function getPrimaryCanalSegments(){
 }
 
 function getCanalPathBetween(startLat,startLng,endLat,endLng){
-    const segments=getPrimaryCanalSegments();
-    if(segments.length===0)return null;
-    let bestPath=null,bestScore=Infinity;
-    segments.forEach(seg=>{
-        if(!seg||seg.length<2)return;
-        const startIdx=findClosestIndex(seg,startLat,startLng);
-        const endIdx=findClosestIndex(seg,endLat,endLng);
-        const startPt=seg[startIdx],endPt=seg[endIdx];
-        const startDist=haversineDistanceMeters(startPt,[startLat,startLng]);
-        const endDist=haversineDistanceMeters(endPt,[endLat,endLng]);
-        const score=startDist+endDist;
-        if(score<bestScore&&startDist<=SEGMENT_ATTACH_LIMIT_METERS&&endDist<=SEGMENT_ATTACH_LIMIT_METERS){
-            bestScore=score;
-            bestPath=startIdx<=endIdx?seg.slice(startIdx,endIdx+1):seg.slice(endIdx,startIdx+1).reverse();
-        }
-    });
-    return bestPath;
+    const coords=getPrimaryCanalCoords();
+    if(!coords||coords.length<2)return null;
+    const startIdx=findClosestIndex(coords,startLat,startLng);
+    const endIdx=findClosestIndex(coords,endLat,endLng);
+    if(startIdx<=endIdx)return coords.slice(startIdx,endIdx+1);
+    return coords.slice(endIdx,startIdx+1).reverse();
 }
 
 function updateRoute(){
