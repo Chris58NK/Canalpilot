@@ -459,8 +459,9 @@ function calculateLookahead(){
     resultDiv.innerHTML=html;
     clearMarkers();
     
-    const endFeature=features[features.length-1];
-    let pathCoords=getCanalPathBetween(currentStart.latitude,currentStart.longitude,endFeature.latitude,endFeature.longitude);
+    const allFeaturesInWindow=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
+    const routeEnd=allFeaturesInWindow[allFeaturesInWindow.length-1];
+    let pathCoords=getCanalPathBetween(currentStart.latitude,currentStart.longitude,routeEnd.latitude,routeEnd.longitude);
     if(!pathCoords||pathCoords.length<2){
         pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
     }
