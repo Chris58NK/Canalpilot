@@ -416,7 +416,8 @@ function haversineDistanceMeters(a,b){
     const lat1=toRad(a[0]),lat2=toRad(b[0]);
     const sinLat=Math.sin(dLat/2),sinLon=Math.sin(dLon/2);
     const h=sinLat*sinLat+Math.cos(lat1)*Math.cos(lat2)*sinLon*sinLon;
-    return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+    const clamped=Math.max(0,Math.min(1,Math.sqrt(h)));
+    return 2*R*Math.asin(clamped);
 }
 
 /** Split coordinates into segments whenever consecutive points jump over maxJumpMeters. */
@@ -489,7 +490,8 @@ function getPrimaryCanalSegments(){
     const coords=getPrimaryCanalCoords();
     const segments=splitOnJumps(coords);
     if(segments.length>0)return segments;
-    return coords&&coords.length>1?[coords]:[];
+    if(coords&&coords.length>1)return[coords];
+    return [];
 }
 
 function getCanalPathBetween(startLat,startLng,endLat,endLng){
