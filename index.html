@@ -101,49 +101,57 @@ function splitOnJumps(coords, maxJump = SEGMENT_ATTACH_LIMIT_METERS) {
     return segments;
 }
 
-function calculateLookahead(){
+ function calculateLookahead(){
     if(!currentStart) return alert('Select start point');
-    const speed=parseFloat(document.getElementById('speed').value);
-    const hours=parseFloat(document.getElementById('lookahead').value);
-    const maxDist=currentStart.cumulativeDistance + (speed*hours);
-    const activeFilters=new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb=>cb.value));
     
-    const features=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance && f.cumulativeDistance<=maxDist && activeFilters.has(f.type)).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
+    // 1. Get stats and timing (Your original logic)
+    const speed = parseFloat(document.getElementById('speed').value);
+    const hours = parseFloat(document.getElementById('lookahead').value);
+    const maxDist = currentStart.cumulativeDistance + (speed * hours);
+    const activeFilters = new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb=>cb.value));
     
-    // UI Update
-    const resDiv=document.getElementById('results');
-    resDiv.innerHTML = `<div class="stats"><div class="stat-box"><div class="stat-value">${features.length}</div><div class="stat-label">Features</div></div></div>`;
-    
+    const features = testCorridor.features.filter(f => 
+        f.cumulativeDistance > currentStart.cumulativeDistance && 
+        f.cumulativeDistance <= maxDist && 
+        activeFilters.has(f.type)
+    ).sort((a,b) => a.cumulativeDistance - b.cumulativeDistance);
+
+    // 2. Clear Map
     clearMarkers();
+    if(polyline) map.removeLayer(polyline);
+
+    // 3. THE FIX: Fetch curved geometry and split it
+    const allFeaturesInWindow = testCorridor.features.filter(f => f.cumulativeDistance > currentStart.cumulativeDistance && f.cumulativeDistance <= maxDist).sort((a,b) => a.cumulativeDistance - b.cumulativeDistance);
+    const routeEnd = allFeaturesInWindow[allFeaturesInWindow.length - 1];
+
+    let pathCoords = routeEnd ? getCanalPathBetween(currentStart.latitude, currentStart.longitude, routeEnd.latitude, routeEnd.longitude) : [];
     
-    const allFeaturesInWindow=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance && f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
-    const routeEnd=allFeaturesInWindow.length>0 ? allFeaturesInWindow[allFeaturesInWindow.length-1] : null;
+    // Fallback if geometry engine fails
+    if(!pathCoords || pathCoords.length < 2) {
+        pathCoords = allFeaturesInWindow.map(f => [f.latitude, f.longitude]);
+    }
 
-    let pathCoords = null;
-    if(routeEnd) pathCoords = getCanalPathBetween(currentStart.latitude, currentStart.longitude, routeEnd.latitude, routeEnd.longitude);
-    if(!pathCoords || pathCoords.length < 2) pathCoords = allFeaturesInWindow.map(f=>[f.latitude,f.longitude]);
-
-    // THE FIX: Use splitOnJumps and L.layerGroup
-    const segments = splitOnJumps(pathCoords, 400);
+    // 4. DRAW SEGMENTS: This stops the straight lines across land
+    const segments = splitOnJumps(pathCoords, 400); 
     polyline = L.layerGroup().addTo(map);
+
     segments.forEach(seg => {
-        L.polyline(seg, {color:'#667eea', weight:5, opacity:0.9, lineJoin:'round'}).addTo(polyline);
+        L.polyline(seg, {
+            color: '#667eea', 
+            weight: 6, 
+            opacity: 0.9,
+            lineJoin: 'round'
+        }).addTo(polyline);
     });
 
-    features.forEach(f=>{
-        const m=L.circleMarker([f.latitude,f.longitude],{radius:6,fillColor:'#007BFF',color:'white',weight:1,fillOpacity:0.8}).bindPopup(f.name).addTo(map);
+    // 5. Place Dots (Markers)
+    features.forEach(f => {
+        const m = L.circleMarker([f.latitude, f.longitude], {radius: 6, fillColor: '#007BFF', color: 'white', weight: 1, fillOpacity: 0.8}).addTo(map);
         markers.push(m);
     });
 
     if(pathCoords.length > 0) map.fitBounds(L.latLngBounds(pathCoords), {padding:[50,50]});
 }
-
-function clearMarkers(){
-    markers.forEach(m=>map.removeLayer(m));
-    markers=[];
-    if(polyline) map.removeLayer(polyline);
-}
-
 // ... (Rest of search, reset, initMap logic) ...
 window.onload=function(){initMap();};
 </script>
