@@ -1,2 +1,514 @@
- <div>\n<br class="Apple-interchange-newline">\n<!DOCTYPE html>\n<br>\n<html lang="en">\n<br>\n<head>\n<br>\n<style>\n<br>/* Glassmorphism Panel */<br>.glass-panel {<br> background: rgba(255, 255, 255, 0.7);<br> backdrop-filter: blur(10px);<br> -webkit-backdrop-filter: blur(10px);<br> border-radius: 15px;<br> border: 1px solid rgba(255, 255, 255, 0.3);<br> padding: 20px;<br> box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);<br> margin-bottom: 20px;<br>}<br>\n<br>/* Modern Inputs */<br>input, select, button {<br> border-radius: 8px !important;<br> border: 1px solid #ddd;<br> padding: 10px;<br>}<br>\n</style>\n<br> <meta charset="UTF-8">\n<br>\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<br>\n<title>🚤 CanalPilot - Route Calculator</title>\n<br>\n<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />\n<br>\n<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">\n</script>\n<br>\n<style>\n<br>*{margin:0;padding:0;box-sizing:border-box}<br>body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#74ebd5,#acb6e5);padding:20px;min-height:100vh}<br>.container{max-width:1600px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}<br>h1{grid-column:1/-1;text-align:center;color:white;font-size:28px;margin-bottom:20px}<br>.panel{background:white;padding:20px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.1)}<br>h2{color:#333;font-size:18px;margin-bottom:15px;border-bottom:2px solid #007BFF;padding-bottom:10px}<br>.input-group{margin-bottom:15px}<br>label{display:block;font-weight:bold;margin-bottom:5px;color:#555;font-size:13px}<br>.search-box{width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:14px}<br>.search-box:focus{outline:none;border-color:#007BFF}<br>.search-results{position:absolute;background:white;border:2px solid #007BFF;border-top:none;border-radius:0 0 5px 5px;max-height:250px;overflow-y:auto;width:calc(100% - 4px);z-index:100;display:none}<br>.search-results.show{display:block}<br>.search-item{padding:8px;cursor:pointer;border-bottom:1px solid #eee;font-size:12px}<br>.search-item:hover{background:#f0f8ff}<br>.selected-badge{background:#e8f5e9;padding:8px;border-radius:5px;border-left:4px solid #28a745;font-size:12px;margin-top:8px;display:none}<br>.selected-badge.show{display:block}<br>.button-group{display:flex;gap:10px;margin:20px 0}<br>button{flex:1;padding:10px;background-color:#007BFF;color:white;border:none;border-radius:5px;cursor:pointer;font-weight:bold}<br>button:hover{background-color:#0056b3}<br>#map{height:600px;border-radius:8px}<br>.map-panel{grid-column:2/4;padding:0}<br>.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:15px 0}<br>.stat-box{background:#f0f8ff;padding:12px;border-radius:5px;border-left:4px solid #007BFF;text-align:center}<br>.stat-label{font-size:11px;color:#666}<br>.stat-value{font-size:20px;font-weight:bold;color:#007BFF}<br>.features-list{max-height:400px;overflow-y:auto}<br>.feature-item{padding:10px;margin:8px 0;background:#f9f9f9;border-left:4px solid #007BFF;border-radius:4px;font-size:12px;cursor:pointer}<br>.feature-item:hover{background:#f0f0f0}<br>.badge{display:inline-block;padding:2px 6px;border-radius:10px;color:white;font-size:10px;font-weight:bold;margin-right:5px}<br>.badge-lock{background:#ff6b6b}<br>.badge-bridge{background:#4ecdc4}<br>.badge-marina{background:#45b7d1}<br>.badge-wharf{background:#96ceb4}<br>.badge-water{background:#3498db}<br>.badge-tunnel{background:#95a5a6}<br>.badge-junction{background:#667eea}<br>.badge-winding{background:#e74c3c}<br>.badge-aqueduct{background:#f39c12}<br>.filter-checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}<br>.filter-check-item{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px}<br>.filter-check-item input{cursor:pointer}<br>.filter-links{font-size:11px;margin-top:5px}<br>.filter-links a{color:#007BFF;cursor:pointer;text-decoration:underline}<br>.empty-state{text-align:center;padding:30px 10px;color:#999}<br>.route-info{background:#e8f5e9;padding:10px;border-radius:5px;margin:10px 0;border-left:4px solid #28a745;font-size:12px}<br>.route-warning{background:#fff4e5;padding:10px;border-radius:5px;margin:10px 0;border-left:4px solid #d97706;font-size:12px;color:#92400e}<br>.search-container{position:relative}<br>@media (max-width:1200px){<br> .container{grid-template-columns:1fr 1fr}<br> .map-panel{grid-column:1/-1}<br> h1{grid-column:1/-1}<br>}<br>\n</style>\n<br>\n</head>\n<br>\n<body>\n<br>\n<h1>🚤 CanalPilot - Route Calculator</h1>\n<br>\n<div class="container">\n<br>\n<div class="panel">\n<br>\n<h2>Route Setup</h2>\n<br>\n<div class="input-group">\n<br>\n<label>Start Point:</label>\n<br>\n<div class="search-container">\n<br>\n<input type="text" id="startSearch" class="search-box" placeholder="Type to search...">\n<br>\n<div id="startResults" class="search-results">\n</div>\n<br>\n</div>\n<br>\n<div id="startBadge" class="selected-badge">\n</div>\n<br>\n</div>\n<br>\n<div class="input-group">\n<br>\n<label>End Point:</label>\n<br>\n<div class="search-container">\n<br>\n<input type="text" id="endSearch" class="search-box" placeholder="Type to search...">\n<br>\n<div id="endResults" class="search-results">\n</div>\n<br>\n</div>\n<br>\n<div id="endBadge" class="selected-badge">\n</div>\n<br>\n</div>\n<br>\n<div id="routeInfo" class="route-info" style="display:none">Distance: <strong id="routeDist">0</strong> mi | Duration: <strong id="routeDur">0</strong>\n</div>\n<br>\n<div id="routeWarning" class="route-warning" style="display:none">\n</div>\n<br>\n<h2>Calculate</h2>\n<br>\n<div class="input-group">\n<br>\n<label>Speed (mph):</label>\n<br>\n<input type="number" id="speed" value="3" min="0.5" max="10" step="0.5" class="search-box">\n<br>\n</div>\n<br>\n<div class="input-group">\n<br>\n<label>Lookahead (hours):</label>\n<br>\n<input type="number" id="lookahead" value="2" min="0.5" max="24" step="0.5" class="search-box">\n<br>\n</div>\n<br>\n<div class="input-group">\n<br>\n<label>Filter Waypoints:</label>\n<br>\n<div class="filter-checks">\n<br>\n<label class="filter-check-item">\n<input type="checkbox" class="wp-filter" value="lock" checked> <span class="badge badge-lock">LOCK</span>\n</label>\n<br>\n<label class="filter-check-item">\n<input type="checkbox" class="wp-filter" value="bridge" checked> <span class="badge badge-bridge">BRIDGE</span>\n</label>\n<br>\n<label class="filter-check-item">\n<input type="checkbox" class="wp-filter" value="winding" checked> <span class="badge badge-winding">WINDING</span>\n</label>\n<br>\n<label class="filter-check-item">\n<input type="checkbox" class="wp-filter" value="marina" checked> <span class="badge badge-marina">MARINA</span>\n</label>\n<br>\n<label class="filter-check-item">\n<input type="checkbox" class="wp-filter" value="aqueduct" checked> <span class="badge badge-aqueduct">AQUEDUCT</span>\n</label>\n<br>\n<label class="filter-check-item">\n<input type="checkbox" class="wp-filter" value="wharf" checked> <span class="badge badge-wharf">WHARF</span>\n</label>\n<br>\n<label class="filter-check-item">\n<input type="checkbox" class="wp-filter" value="water" checked> <span class="badge badge-water">WATER</span>\n</label>\n<br>\n<label class="filter-check-item">\n<input type="checkbox" class="wp-filter" value="tunnel" checked> <span class="badge badge-tunnel">TUNNEL</span>\n</label>\n<br>\n<label class="filter-check-item">\n<input type="checkbox" class="wp-filter" value="junction" checked> <span class="badge badge-junction">JUNCTION</span>\n</label>\n<br>\n</div>\n<br>\n<div class="filter-links">\n<a onclick="setAllFilters(true)">Select all</a> | <a onclick="setAllFilters(false)">Select none</a>\n</div>\n<br>\n</div>\n<br>\n<div class="button-group">\n<br>\n<button onclick="calculateLookahead()">Calculate</button>\n<br>\n<button onclick="resetForm()">Reset</button>\n<br>\n</div>\n<br>\n</div>\n<br>\n<div class="panel">\n<br>\n<h2>Upcoming Features</h2>\n<br>\n<div id="results">\n<br>\n<div class="empty-state">Select start point and click Calculate</div>\n<br>\n</div>\n<br>\n</div>\n<br>\n<div class="panel map-panel">\n<br>\n<div id="map">\n</div>\n<br>\n</div>\n<br>\n</div>\n<br>\n<br>\n<script src="testCorridor.js">\n</script>\n<br>\n<script>\n<br>let map;<br>let markers=[];<br>let polyline;<br>let startMarker;<br>let endMarker;<br>let routePolyline;<br>let currentStart=null;<br>let currentEnd=null;<br>let crtCanalGeometry=null;<br>let crtCanalLayer=null;<br>let overpassCanalLayers=[];<br>let overpassCanalsData=null;<br>let cachedOverpassCanals=null;<br>\n<br>// Leicester Line corridor (Norton to Foxton) bbox<br>const BASE_BBOX={south:52.28,west:-1.18,north:52.66,east:-0.97};<br>const BBOX_BUFFER=0.01;<br>const BBOX={<br> south:BASE_BBOX.south-BBOX_BUFFER,<br> west:BASE_BBOX.west-BBOX_BUFFER,<br> north:BASE_BBOX.north+BBOX_BUFFER,<br> east:BASE_BBOX.east+BBOX_BUFFER<br>};<br>const BBOX_STR=`${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;<br>const SEGMENT_ATTACH_LIMIT_METERS=400;<br>const MIN_SEGMENT_POINTS=2;<br>const DEG_TO_RAD=Math.PI/180;<br>\n<br>const CRT_ENDPOINTS=[<br> 'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',<br> 'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/Navigations/FeatureServer/0/query',<br> 'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Waterways/FeatureServer/0/query'<br>];<br>\n<br>const CRT_WHERE_CLAUSES=[<br> "NAV_UNIT_NAME LIKE '%Leicester Line%'",<br> "name LIKE '%Leicester Line%'",<br> "NAVIGATION_NAME LIKE '%Leicester Line%'",<br> "NAV_NAME LIKE '%Leicester Line%'"<br>];<br>\n<br>async function fetchCRTCanalGeometry(){<br> if(crtCanalGeometry)return crtCanalGeometry;<br> for(const endpoint of CRT_ENDPOINTS){<br> for(const whereClause of CRT_WHERE_CLAUSES){<br> const params=new URLSearchParams({where:whereClause,outFields:'*',returnGeometry:true,f:'geojson'});<br> console.log('CRT WFS Query:',{url:endpoint,where:whereClause,timestamp:new Date().toISOString()});<br> try{<br> const response=await fetch(endpoint+'?'+params);<br> if(!response.ok){<br> console.log('CRT WFS Response:',{status:response.status,features:0,timestamp:new Date().toISOString()});<br> console.warn('CRT WFS: HTTP error',response.status,response.statusText);<br> continue;<br> }<br> const data=await response.json();<br> console.log('CRT WFS Response:',{status:response.status,features:data.features?.length||0,timestamp:new Date().toISOString()});<br> if(data.error){console.warn('CRT WFS: API error',data.error.message||JSON.stringify(data.error));continue;}<br> if(data.features&&data.features.length>0){<br> const wayMap={};<br> data.features.forEach((feat,idx)=>{<br> if(feat.geometry&&feat.geometry.coordinates){<br> if(feat.geometry.type==='LineString'||feat.geometry.type==='MultiLineString'){<br> const lines=feat.geometry.type==='MultiLineString'?feat.geometry.coordinates:[feat.geometry.coordinates];<br> lines.forEach((line,lineIdx)=>{<br> wayMap[idx+'_'+lineIdx]={coords:line.map(c=>[c[1],c[0]])};<br> });<br> }<br> }<br> });<br> const ordered=buildOrderedCanalPath(wayMap);<br> if(ordered.length>0){<br> crtCanalGeometry=ordered;<br> console.log('CRT WFS: Loaded '+ordered.length+' coordinates for Leicester Line');<br> return crtCanalGeometry;<br> }<br> console.warn('CRT WFS: Got',data.features.length,'features but no valid geometry');<br> }else{<br> console.warn('CRT WFS: No features returned for endpoint',endpoint,'where:',whereClause);<br> }<br> }catch(e){<br> console.warn('CRT WFS: Fetch error for',endpoint+':',e.message);<br> }<br> }<br> }<br> console.warn('CRT WFS: All CRT endpoints failed');<br> return null;<br>}<br>\n<br>async function fetchOverpassCanalData(){<br> if(overpassCanalsData)return overpassCanalsData;<br> try{<br> const overpassQuery=`[out:json][timeout:25];(relation["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR});way(r);way["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR}););out body;>;out geom;`;<br> const overpassUrl='https://overpass-api.de/api/interpreter';<br> console.log('Overpass request bbox',BBOX_STR);<br> const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});<br> console.log('Overpass Response:',{status:response.status,timestamp:new Date().toISOString()});<br> if(!response.ok)throw new Error('HTTP '+response.status);<br> const data=await response.json();<br> if(!data.elements||data.elements.length===0){throw new Error('Empty response');}<br> overpassCanalsData=parseOverpassElements(data,'Overpass Leicester Line');<br> if(overpassCanalsData.allCoords.length>0){<br> cachedOverpassCanals=overpassCanalsData;<br> return overpassCanalsData;<br> }<br> throw new Error('Parsed Leicester Line geometry had no path');<br> }catch(e){<br> console.warn('Overpass Leicester Line fetch failed:',{reason:e.message||e});<br> return fetchOverpassAllCanals();<br> }<br>}<br>\n<br>async function fetchOverpassAllCanals(){<br> try{<br> const overpassQuery=`[out:json][timeout:25];(relation["waterway"="canal"](${BBOX_STR});way(r);way["waterway"="canal"](${BBOX_STR}););out body;>;out geom;`;<br> const overpassUrl='https://overpass-api.de/api/interpreter';<br> console.log('Overpass request bbox',BBOX_STR);<br> const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});<br> if(!response.ok)throw new Error('HTTP '+response.status);<br> const data=await response.json();<br> const canalsData=parseOverpassElements(data,'Overpass All Canals');<br> if(canalsData.allCoords.length>0){<br> cachedOverpassCanals=canalsData;<br> return canalsData;<br> }<br> if(cachedOverpassCanals){<br> console.warn('Overpass all canals empty, reusing cached geometry');<br> return cachedOverpassCanals;<br> }<br> return null;<br> }catch(e){<br> console.warn('Overpass all canals fetch failed:',{reason:e.message||e});<br> if(cachedOverpassCanals){<br> console.warn('Reusing cached geometry after error');<br> return cachedOverpassCanals;<br> }<br> return null;<br> }<br>}<br>\n<br>function parseOverpassElements(data,label){<br> const result={byWayId:{},allCoords:[]};<br> let wayCount=0,relationCount=0,pointCount=0;<br> try{<br> if(!data||!data.elements){<br> console.warn(label+' parse failure',{reason:'No elements'});<br> return result;<br> }<br> data.elements.forEach(el=>{<br> if(el.type==='relation'){<br> relationCount++;<br> }<br> if(el.type==='way'){<br> wayCount++;<br> if(el.geometry&&el.geometry.length>0){<br> const coords=el.geometry.map(pt=>[pt.lat,pt.lon]);<br> result.byWayId[el.id]={name:el.tags?.name||'Canal '+el.id,coords};<br> pointCount+=coords.length;<br> }<br> }<br> });<br> result.allCoords=buildOrderedCanalPath(result.byWayId);<br> console.log(label+' parse summary',{ways:wayCount,relations:relationCount,totalPoints:pointCount,pathPoints:result.allCoords.length,hasPath:result.allCoords.length>0});<br> if(result.allCoords.length===0){<br> console.warn(label+' parse produced no path',{ways:wayCount,relations:relationCount,totalPoints:pointCount});<br> }<br> }catch(err){<br> console.warn(label+' parse failure',{reason:err.message});<br> }<br> return result;<br>}<br>\n<br>function drawOverpassCanals(canalsData){<br> if(!canalsData||!canalsData.byWayId)return;<br> Object.keys(canalsData.byWayId).forEach(wayId=>{<br> const canal=canalsData.byWayId[wayId];<br> if(canal.coords.length>0){<br> const isLeicesterLine=canal.name.toLowerCase().includes('leicester');<br> const polylineLayer=L.polyline(canal.coords,{<br> color:isLeicesterLine?'#2563eb':'#6b7280',<br> weight:isLeicesterLine?4:2,<br> opacity:isLeicesterLine?0.85:0.6,<br> lineCap:'round',<br> lineJoin:'round'<br> }).addTo(map);<br> overpassCanalLayers.push(polylineLayer);<br> if(isLeicesterLine){<br> console.log('Drew Leicester Line with '+canal.coords.length+' coordinates');<br> }else{<br> console.log('Drew '+canal.name+' with '+canal.coords.length+' coordinates');<br> }<br> }<br> });<br>}<br>\n<br>async function initMap(){<br> map=L.map('map').setView([52.36,-1.1],10);<br> L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);<br> setupSearch('startSearch','startResults','startBadge','start');<br> setupSearch('endSearch','endResults','endBadge','end');<br> const crtCoords=await fetchCRTCanalGeometry();<br> if(crtCoords){<br> console.log('Using CRT canal geometry');<br> const segments=splitOnJumps(crtCoords);<br> if(segments.length>0){<br> crtCanalLayer=L.layerGroup(segments.map(seg=>L.polyline(seg,{color:'#4a90d9',weight:3,opacity:0.7}))).addTo(map);<br> }else{<br> crtCanalLayer=L.polyline(crtCoords,{color:'#4a90d9',weight:3,opacity:0.7}).addTo(map);<br> }<br> return;<br> }<br> const canalsData=await fetchOverpassCanalData();<br> if(canalsData&&Object.keys(canalsData.byWayId).length>0){<br> console.log('Using Overpass canal geometry');<br> drawOverpassCanals(canalsData);<br> return;<br> }<br> console.warn('Both CRT and Overpass failed, drawing canal from testCorridor features');<br> const fallbackCoords=testCorridor.features.slice().sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);<br> if(fallbackCoords.length>0){crtCanalLayer=L.polyline(fallbackCoords,{color:'#4a90d9',weight:3,opacity:0.7}).addTo(map);}<br>}<br>\n<br>function setupSearch(inputId,resultsId,badgeId,type){<br> const input=document.getElementById(inputId);<br> const resultsDiv=document.getElementById(resultsId);<br> input.addEventListener('input',function(){<br> const query=this.value.toLowerCase();<br> resultsDiv.innerHTML='';<br> if(query.length===0){<br> resultsDiv.classList.remove('show');<br> return;<br> }<br> const filtered=testCorridor.features.filter(f=>f.name.toLowerCase().includes(query)).slice(0,15);<br> if(filtered.length===0){<br> resultsDiv.innerHTML='<div class="search-item" style="color:#999;">No matches</div>';<br> }else{<br> filtered.forEach(f=>{<br> const item=document.createElement('div');<br> item.className='search-item';<br> item.textContent=f.name+' ('+f.cumulativeDistance.toFixed(1)+' mi)';<br> item.onclick=function(){selectFeature(f,type,inputId,badgeId);};<br> resultsDiv.appendChild(item);<br> });<br> }<br> resultsDiv.classList.add('show');<br> });<br> document.addEventListener('click',function(e){<br> if(!e.target.closest('.search-container')){<br> resultsDiv.classList.remove('show');<br> }<br> });<br>}<br>\n<br>function selectFeature(feature,type,inputId,badgeId){<br> const input=document.getElementById(inputId);<br> const badge=document.getElementById(badgeId);<br> input.value=feature.name;<br> badge.innerHTML='✓ <strong>'+feature.name+'</strong>\n<br>'+feature.cumulativeDistance.toFixed(1)+' mi';<br> badge.classList.add('show');<br> document.getElementById(inputId.replace('Search','Results')).classList.remove('show');<br> if(type==='start'){<br> currentStart=feature;<br> addStartMarker();<br> }else{<br> currentEnd=feature;<br> addEndMarker();<br> }<br>}<br>\n<br>function addStartMarker(){<br> if(currentStart){<br> if(startMarker)map.removeLayer(startMarker);<br> startMarker=L.circleMarker([currentStart.latitude,currentStart.longitude],{radius:10,fillColor:'#28a745',color:'white',weight:2,fillOpacity:0.9}).bindPopup('START: '+currentStart.name).addTo(map);<br> updateRoute();<br> }<br>}<br>\n<br>function addEndMarker(){<br> if(currentEnd){<br> if(endMarker)map.removeLayer(endMarker);<br> endMarker=L.circleMarker([currentEnd.latitude,currentEnd.longitude],{radius:10,fillColor:'#dc3545',color:'white',weight:2,fillOpacity:0.9}).bindPopup('END: '+currentEnd.name).addTo(map);<br> updateRoute();<br> }<br>}<br>\n<br>/** Calculate haversine distance between two [lat,lng] points in meters. */<br>function haversineDistanceMeters(a,b){<br> const R=6371000,toRad=v=>v*DEG_TO_RAD;<br> const dLat=toRad(b[0]-a[0]),dLon=toRad(b[1]-a[1]);<br> const lat1=toRad(a[0]),lat2=toRad(b[0]);<br> const sinLat=Math.sin(dLat/2),sinLon=Math.sin(dLon/2);<br> const h=sinLat*sinLat+Math.cos(lat1)*Math.cos(lat2)*sinLon*sinLon;<br> const sinHalfCentralAngle=Math.max(0,Math.min(1,Math.sqrt(h)));<br> return 2*R*Math.asin(sinHalfCentralAngle);<br>}<br>\n<br>/** Split coordinates into segments whenever consecutive points jump over maxJumpMeters. */<br>function splitOnJumps(coords,maxJumpMeters=SEGMENT_ATTACH_LIMIT_METERS){<br> if(!coords?.length)return [];<br> const segments=[];<br> let current=[coords[0]];<br> for(let i=1;i<coords.length;i++){<br> const d=haversineDistanceMeters(coords[i-1],coords[i]);<br> if(d>maxJumpMeters){<br> if(current.length>=MIN_SEGMENT_POINTS)segments.push(current);<br> current=[coords[i]];<br> }else{<br> current.push(coords[i]);<br> }<br> }<br> if(current.length>=MIN_SEGMENT_POINTS)segments.push(current);<br> return segments;<br>}<br>\n<br>function findClosestIndex(coords,lat,lng){<br> let minDist=Infinity,closestIdx=0;<br> const cosLat=Math.cos(lat*DEG_TO_RAD);<br> for(let i=0;i<coords.length;i++){<br> const dlat=coords[i][0]-lat,dlng=(coords[i][1]-lng)*cosLat;<br> const d=dlat*dlat+dlng*dlng;<br> if(d<minDist){minDist=d;closestIdx=i;}<br> }<br> return closestIdx;<br>}<br>\n<br>function getCoordCanalDist(coord){<br> const refFeatures=testCorridor.features;<br> if(!refFeatures||refFeatures.length===0)return 0;<br> let minD=Infinity,best=refFeatures[0];<br> const cosLat=Math.cos(coord[0]*DEG_TO_RAD);<br> for(const f of refFeatures){<br> const dlat=f.latitude-coord[0],dlng=(f.longitude-coord[1])*cosLat;<br> const d=dlat*dlat+dlng*dlng;<br> if(d<minD){minD=d;best=f;}<br> }<br> return best.cumulativeDistance;<br>}<br>\n<br>function buildOrderedCanalPath(byWayId){<br> const ways=Object.values(byWayId).filter(w=>w.coords&&w.coords.length>0);<br> const orderedWays=ways.map(way=>{<br> const coords=way.coords.slice();<br> const firstDist=getCoordCanalDist(coords[0]);<br> const lastDist=getCoordCanalDist(coords[coords.length-1]);<br> if(firstDist>lastDist)coords.reverse();<br> return{coords,sortKey:getCoordCanalDist(coords[0])};<br> });<br> orderedWays.sort((a,b)=>a.sortKey-b.sortKey);<br> return orderedWays.flatMap(way=>way.coords);<br>}<br>\n<br>function getPrimaryCanalCoords(){<br> if(crtCanalGeometry&&crtCanalGeometry.length>1)return crtCanalGeometry;<br> if(overpassCanalsData&&overpassCanalsData.allCoords&&overpassCanalsData.allCoords.length>1)return overpassCanalsData.allCoords;<br> if(cachedOverpassCanals&&cachedOverpassCanals.allCoords&&cachedOverpassCanals.allCoords.length>1){<br> console.log('Reusing cached Overpass geometry');<br> return cachedOverpassCanals.allCoords;<br> }<br> return [];<br>}<br>\n<br>/** Return primary canal geometry split into contiguous segments. */<br>function getPrimaryCanalSegments(){<br> const coords=getPrimaryCanalCoords();<br> const segments=splitOnJumps(coords);<br> if(segments.length>0)return segments;<br> if(coords&&coords.length>1)return[coords];<br> return [];<br>}<br>\n<br>function getCanalPathBetween(startLat,startLng,endLat,endLng){<br> const coords=getPrimaryCanalCoords();<br> if(!coords||coords.length<2)return null;<br> const startIdx=findClosestIndex(coords,startLat,startLng);<br> const endIdx=findClosestIndex(coords,endLat,endLng);<br> if(startIdx<=endIdx)return coords.slice(startIdx,endIdx+1);<br> return coords.slice(endIdx,startIdx+1).reverse();<br>}<br>\n<br>function updateRoute(){<br> if(currentStart&&currentEnd){<br> if(routePolyline)map.removeLayer(routePolyline);<br> const dist=Math.abs(currentEnd.cumulativeDistance-currentStart.cumulativeDistance);<br> const speed=parseFloat(document.getElementById('speed').value)||3;<br> const hours=Math.floor(dist/speed);<br> const mins=Math.round((dist/speed-hours)*60);<br> const timeStr=hours>0?hours+'h '+mins+'m':mins+'m';<br> document.getElementById('routeDist').textContent=dist.toFixed(1);<br> document.getElementById('routeDur').textContent=timeStr;<br> document.getElementById('routeInfo').style.display='block';<br> const warning=document.getElementById('routeWarning');<br> warning.style.display='none';<br> let pathCoords=getCanalPathBetween(currentStart.latitude,currentStart.longitude,currentEnd.latitude,currentEnd.longitude);<br> if(!pathCoords||pathCoords.length<2){<br> const minDist=Math.min(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);<br> const maxDist=Math.max(currentStart.cumulativeDistance,currentEnd.cumulativeDistance);<br> pathCoords=testCorridor.features.filter(f=>f.cumulativeDistance>=minDist&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);<br> if(pathCoords.length<2){<br> console.warn('Route fallback failed to build path, geometry unavailable');<br> }<br> warning.textContent='Using fallback route (geometry unavailable).';<br> warning.style.display='block';<br> }else{<br> console.log('Route path built with',pathCoords.length,'points');<br> }<br> routePolyline=L.polyline(pathCoords,{color:'#28a745',weight:4,opacity:0.8}).addTo(map);<br> }<br>}<br>\n<br>function calculateLookahead(){<br> if(!currentStart){<br> alert('Select a start point');<br> return;<br> }<br> document.getElementById('routeWarning').style.display='none';<br> const speed=parseFloat(document.getElementById('speed').value);<br> const hours=parseFloat(document.getElementById('lookahead').value);<br> const distance=speed*hours;<br> const maxDist=currentStart.cumulativeDistance+distance;<br> const activeFilters=new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb=>cb.value));<br> const features=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist&&activeFilters.has(f.type)).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);<br> const resultDiv=document.getElementById('results');<br> resultDiv.innerHTML='';<br> if(features.length===0){<br> resultDiv.innerHTML='<div class="empty-state">No features found</div>';<br> clearMarkers();<br> return;<br> }<br> const locks=features.filter(f=>f.type==='lock').length;<br> const bridges=features.filter(f=>f.type==='bridge').length;<br> const marinas=features.filter(f=>f.type==='marina').length;<br> let html='<div class="stats">\n<div class="stat-box">\n<div class="stat-label">Ahead</div>\n<div class="stat-value">'+features.length+'</div>\n</div>';<br> html+='<div class="stat-box">\n<div class="stat-label">Locks</div>\n<div class="stat-value">'+locks+'</div>\n</div>';<br> html+='<div class="stat-box">\n<div class="stat-label">Bridges</div>\n<div class="stat-value">'+bridges+'</div>\n</div>';<br> html+='<div class="stat-box">\n<div class="stat-label">Marinas</div>\n<div class="stat-value">'+marinas+'</div>\n</div>\n</div>';<br> html+='<div class="features-list">';<br> features.forEach(f=>{<br> const eta=(f.cumulativeDistance-currentStart.cumulativeDistance)/speed;<br> const h=Math.floor(eta);<br> const m=Math.round((eta-h)*60);<br> const timeStr=h>0?h+'h '+m+'m':m+'m';<br> html+='<div class="feature-item" onclick="map.setView(['+f.latitude+','+f.longitude+'],14)">';<br> html+='<span class="badge badge-'+f.type+'">'+f.type.toUpperCase()+'</span>';<br> html+='<strong>'+f.name+'</strong>\n<br>';<br> html+='<small>'+f.cumulativeDistance.toFixed(1)+' mi | ETA: '+timeStr+'</small>';<br> html+='</div>';<br> });<br> html+='</div>';<br> resultDiv.innerHTML=html;<br> clearMarkers();<br> <br> const allFeaturesInWindow=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);<br> const routeEnd=allFeaturesInWindow.length>0?allFeaturesInWindow[allFeaturesInWindow.length-1]:(features.length>0?features[features.length-1]:null);<br> const warning=document.getElementById('routeWarning');<br> let pathCoords=routeEnd?getCanalPathBetween(currentStart.latitude,currentStart.longitude,routeEnd.latitude,routeEnd.longitude):null;<br> if(!pathCoords||pathCoords.length<2){<br> pathCoords=allFeaturesInWindow.length>0?allFeaturesInWindow.map(f=>[f.latitude,f.longitude]):[];<br> warning.textContent='Using fallback route (geometry unavailable).';<br> warning.style.display='block';<br> }else{<br> warning.style.display='none';<br> }<br> polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);<br> <br> features.forEach(f=>{<br> const colors={lock:'#ff6b6b',bridge:'#4ecdc4',marina:'#45b7d1',wharf:'#96ceb4',water:'#3498db',tunnel:'#95a5a6',junction:'#667eea',winding:'#e74c3c',aqueduct:'#f39c12'};<br> const m=L.circleMarker([f.latitude,f.longitude],{radius:6,fillColor:colors[f.type]||'#007BFF',color:'white',weight:1,fillOpacity:0.8}).bindPopup(f.name).addTo(map);<br> markers.push(m);<br> });<br> const allCoords=pathCoords.slice();<br> if(currentEnd)allCoords.push([currentEnd.latitude,currentEnd.longitude]);<br> const bounds=L.latLngBounds(allCoords);<br> map.fitBounds(bounds,{padding:[50,50]});<br>}<br>\n<br>function clearMarkers(){<br> markers.forEach(m=>map.removeLayer(m));<br> markers=[];<br> if(polyline)map.removeLayer(polyline);<br> if(routePolyline)map.removeLayer(routePolyline);<br>}<br>\n<br>function setAllFilters(state){<br> document.querySelectorAll('.wp-filter').forEach(cb=>cb.checked=state);<br>}<br>\n<br>function resetForm(){<br> document.getElementById('startSearch').value='';<br> document.getElementById('endSearch').value='';<br> document.getElementById('startBadge').classList.remove('show');<br> document.getElementById('endBadge').classList.remove('show');<br> document.getElementById('speed').value='3';<br> document.getElementById('lookahead').value='2';<br> document.getElementById('results').innerHTML='<div class="empty-state">Select start point and click Calculate</div>';<br> document.getElementById('routeInfo').style.display='none';<br> document.getElementById('routeWarning').style.display='none';<br> currentStart=null;<br> currentEnd=null;<br> clearMarkers();<br> if(startMarker)map.removeLayer(startMarker);<br> if(endMarker)map.removeLayer(endMarker);<br>}<br>\n<br>window.onload=function(){initMap();};<br>\n</script>\n<br>\n</body>\n<br>\n</html>\n</div>
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚤 CanalPilot - Route Calculator</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #74ebd5, #acb6e5);
+            padding: 20px;
+            min-height: 100vh;
+        }
 
+        /* Glassmorphism Panel Integration */
+        .glass-panel, .panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        h1 { grid-column: 1/-1; text-align: center; color: white; font-size: 28px; margin-bottom: 20px; }
+        h2 { color: #333; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #007BFF; padding-bottom: 10px; }
+
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 13px; }
+
+        input, select, .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px !important;
+            font-size: 14px;
+        }
+
+        .search-box:focus { outline: none; border-color: #007BFF; }
+        
+        .search-container { position: relative; }
+        .search-results {
+            position: absolute;
+            background: white;
+            border: 2px solid #007BFF;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            max-height: 250px;
+            overflow-y: auto;
+            width: calc(100% - 4px);
+            z-index: 100;
+            display: none;
+        }
+        .search-results.show { display: block; }
+        .search-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 12px; }
+        .search-item:hover { background: #f0f8ff; }
+
+        .selected-badge {
+            background: #e8f5e9;
+            padding: 8px;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+            font-size: 12px;
+            margin-top: 8px;
+            display: none;
+        }
+        .selected-badge.show { display: block; }
+
+        .button-group { display: flex; gap: 10px; margin: 20px 0; }
+        button {
+            flex: 1;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #0056b3; }
+
+        #map { height: 600px; border-radius: 8px; width: 100%; }
+        .map-panel { grid-column: 2/4; padding: 0; overflow: hidden; }
+
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .stat-box { background: #f0f8ff; padding: 12px; border-radius: 5px; border-left: 4px solid #007BFF; text-align: center; }
+        .stat-label { font-size: 11px; color: #666; }
+        .stat-value { font-size: 20px; font-weight: bold; color: #007BFF; }
+
+        .features-list { max-height: 400px; overflow-y: auto; }
+        .feature-item { padding: 10px; margin: 8px 0; background: #f9f9f9; border-left: 4px solid #007BFF; border-radius: 4px; font-size: 12px; cursor: pointer; }
+        .feature-item:hover { background: #f0f0f0; }
+
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 10px; color: white; font-size: 10px; font-weight: bold; margin-right: 5px; }
+        .badge-lock { background: #ff6b6b; }
+        .badge-bridge { background: #4ecdc4; }
+        .badge-marina { background: #45b7d1; }
+        .badge-wharf { background: #96ceb4; }
+        .badge-water { background: #3498db; }
+        .badge-tunnel { background: #95a5a6; }
+        .badge-junction { background: #667eea; }
+        .badge-winding { background: #e74c3c; }
+        .badge-aqueduct { background: #f39c12; }
+
+        .filter-checks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+        .filter-check-item { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; }
+        .filter-links { font-size: 11px; margin-top: 5px; }
+        .filter-links a { color: #007BFF; cursor: pointer; text-decoration: underline; }
+
+        .empty-state { text-align: center; padding: 30px 10px; color: #999; }
+        .route-info { background: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #28a745; font-size: 12px; }
+        .route-warning { background: #fff4e5; padding: 10px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #d97706; font-size: 12px; color: #92400e; }
+
+        @media (max-width: 1200px) {
+            .container { grid-template-columns: 1fr 1fr; }
+            .map-panel { grid-column: 1/-1; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>🚤 CanalPilot - Route Calculator</h1>
+
+<div class="container">
+    <div class="panel">
+        <h2>Route Setup</h2>
+        <div class="input-group">
+            <label>Start Point:</label>
+            <div class="search-container">
+                <input type="text" id="startSearch" class="search-box" placeholder="Type to search...">
+                <div id="startResults" class="search-results"></div>
+            </div>
+            <div id="startBadge" class="selected-badge"></div>
+        </div>
+
+        <div class="input-group">
+            <label>End Point:</label>
+            <div class="search-container">
+                <input type="text" id="endSearch" class="search-box" placeholder="Type to search...">
+                <div id="endResults" class="search-results"></div>
+            </div>
+            <div id="endBadge" class="selected-badge"></div>
+        </div>
+
+        <div id="routeInfo" class="route-info" style="display:none">
+            Distance: <strong id="routeDist">0</strong> mi | Duration: <strong id="routeDur">0</strong>
+        </div>
+        <div id="routeWarning" class="route-warning" style="display:none"></div>
+
+        <h2>Settings</h2>
+        <div class="input-group">
+            <label>Speed (mph):</label>
+            <input type="number" id="speed" value="3" min="0.5" max="10" step="0.5">
+        </div>
+
+        <div class="input-group">
+            <label>Lookahead (hours):</label>
+            <input type="number" id="lookahead" value="2" min="0.5" max="24" step="0.5">
+        </div>
+
+        <div class="input-group">
+            <label>Filter Waypoints:</label>
+            <div class="filter-checks">
+                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="lock" checked> <span class="badge badge-lock">LOCK</span></label>
+                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="bridge" checked> <span class="badge badge-bridge">BRIDGE</span></label>
+                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="winding" checked> <span class="badge badge-winding">WINDING</span></label>
+                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="marina" checked> <span class="badge badge-marina">MARINA</span></label>
+                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="aqueduct" checked> <span class="badge badge-aqueduct">AQUEDUCT</span></label>
+                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="wharf" checked> <span class="badge badge-wharf">WHARF</span></label>
+                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="water" checked> <span class="badge badge-water">WATER</span></label>
+                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="tunnel" checked> <span class="badge badge-tunnel">TUNNEL</span></label>
+                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="junction" checked> <span class="badge badge-junction">JUNCTION</span></label>
+            </div>
+            <div class="filter-links">
+                <a onclick="setAllFilters(true)">Select all</a> | <a onclick="setAllFilters(false)">Select none</a>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button onclick="calculateLookahead()">Calculate</button>
+            <button onclick="resetForm()">Reset</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Upcoming Features</h2>
+        <div id="results">
+            <div class="empty-state">Select start point and click Calculate</div>
+        </div>
+    </div>
+
+    <div class="panel map-panel">
+        <div id="map"></div>
+    </div>
+</div>
+
+<script src="testCorridor.js"></script>
+<script>
+    let map;
+    let markers = [];
+    let polyline;
+    let startMarker;
+    let endMarker;
+    let routePolyline;
+    let currentStart = null;
+    let currentEnd = null;
+    let crtCanalGeometry = null;
+    let crtCanalLayer = null;
+    let overpassCanalLayers = [];
+    let overpassCanalsData = null;
+    let cachedOverpassCanals = null;
+
+    const BASE_BBOX = { south: 52.28, west: -1.18, north: 52.66, east: -0.97 };
+    const BBOX_BUFFER = 0.01;
+    const BBOX = {
+        south: BASE_BBOX.south - BBOX_BUFFER,
+        west: BASE_BBOX.west - BBOX_BUFFER,
+        north: BASE_BBOX.north + BBOX_BUFFER,
+        east: BASE_BBOX.east + BBOX_BUFFER
+    };
+    const BBOX_STR = `${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
+    const SEGMENT_ATTACH_LIMIT_METERS = 400;
+    const MIN_SEGMENT_POINTS = 2;
+    const DEG_TO_RAD = Math.PI / 180;
+
+    const CRT_ENDPOINTS = [
+        'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
+        'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/Navigations/FeatureServer/0/query',
+        'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Waterways/FeatureServer/0/query'
+    ];
+
+    const CRT_WHERE_CLAUSES = [
+        "NAV_UNIT_NAME LIKE '%Leicester Line%'",
+        "name LIKE '%Leicester Line%'",
+        "NAVIGATION_NAME LIKE '%Leicester Line%'",
+        "NAV_NAME LIKE '%Leicester Line%'"
+    ];
+
+    async function fetchCRTCanalGeometry() {
+        if (crtCanalGeometry) return crtCanalGeometry;
+        for (const endpoint of CRT_ENDPOINTS) {
+            for (const whereClause of CRT_WHERE_CLAUSES) {
+                const params = new URLSearchParams({ where: whereClause, outFields: '*', returnGeometry: true, f: 'geojson' });
+                try {
+                    const response = await fetch(endpoint + '?' + params);
+                    if (!response.ok) continue;
+                    const data = await response.json();
+                    if (data.features && data.features.length > 0) {
+                        const wayMap = {};
+                        data.features.forEach((feat, idx) => {
+                            if (feat.geometry && feat.geometry.coordinates) {
+                                const lines = feat.geometry.type === 'MultiLineString' ? feat.geometry.coordinates : [feat.geometry.coordinates];
+                                lines.forEach((line, lineIdx) => {
+                                    wayMap[idx + '_' + lineIdx] = { coords: line.map(c => [c[1], c[0]]) };
+                                });
+                            }
+                        });
+                        const ordered = buildOrderedCanalPath(wayMap);
+                        if (ordered.length > 0) {
+                            crtCanalGeometry = ordered;
+                            return crtCanalGeometry;
+                        }
+                    }
+                } catch (e) { console.warn('CRT Fetch error', e); }
+            }
+        }
+        return null;
+    }
+
+    async function fetchOverpassCanalData() {
+        if (overpassCanalsData) return overpassCanalsData;
+        try {
+            const overpassQuery = `[out:json][timeout:25];(relation["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR});way(r);way["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR}););out body;>;out geom;`;
+            const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(overpassQuery) });
+            const data = await response.json();
+            overpassCanalsData = parseOverpassElements(data, 'Overpass Leicester Line');
+            return overpassCanalsData;
+        } catch (e) { return fetchOverpassAllCanals(); }
+    }
+
+    async function fetchOverpassAllCanals() {
+        try {
+            const overpassQuery = `[out:json][timeout:25];(relation["waterway"="canal"](${BBOX_STR});way(r);way["waterway"="canal"](${BBOX_STR}););out body;>;out geom;`;
+            const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(overpassQuery) });
+            const data = await response.json();
+            return parseOverpassElements(data, 'Overpass All Canals');
+        } catch (e) { return null; }
+    }
+
+    function parseOverpassElements(data, label) {
+        const result = { byWayId: {}, allCoords: [] };
+        if (!data || !data.elements) return result;
+        data.elements.forEach(el => {
+            if (el.type === 'way' && el.geometry) {
+                const coords = el.geometry.map(pt => [pt.lat, pt.lon]);
+                result.byWayId[el.id] = { name: el.tags?.name || 'Canal ' + el.id, coords };
+            }
+        });
+        result.allCoords = buildOrderedCanalPath(result.byWayId);
+        return result;
+    }
+
+    function drawOverpassCanals(canalsData) {
+        if (!canalsData || !canalsData.byWayId) return;
+        Object.keys(canalsData.byWayId).forEach(wayId => {
+            const canal = canalsData.byWayId[wayId];
+            const isLeicesterLine = canal.name.toLowerCase().includes('leicester');
+            const polylineLayer = L.polyline(canal.coords, {
+                color: isLeicesterLine ? '#2563eb' : '#6b7280',
+                weight: isLeicesterLine ? 4 : 2,
+                opacity: 0.8
+            }).addTo(map);
+            overpassCanalLayers.push(polylineLayer);
+        });
+    }
+
+    async function initMap() {
+        map = L.map('map').setView([52.36, -1.1], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+        
+        setupSearch('startSearch', 'startResults', 'startBadge', 'start');
+        setupSearch('endSearch', 'endResults', 'endBadge', 'end');
+
+        const crtCoords = await fetchCRTCanalGeometry();
+        if (crtCoords) {
+            const segments = splitOnJumps(crtCoords);
+            crtCanalLayer = L.layerGroup(segments.map(seg => L.polyline(seg, { color: '#4a90d9', weight: 3 }))).addTo(map);
+            return;
+        }
+        const canalsData = await fetchOverpassCanalData();
+        if (canalsData) drawOverpassCanals(canalsData);
+    }
+
+    function setupSearch(inputId, resultsId, badgeId, type) {
+        const input = document.getElementById(inputId);
+        const resultsDiv = document.getElementById(resultsId);
+        input.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            resultsDiv.innerHTML = '';
+            if (query.length === 0) { resultsDiv.classList.remove('show'); return; }
+            const filtered = testCorridor.features.filter(f => f.name.toLowerCase().includes(query)).slice(0, 15);
+            filtered.forEach(f => {
+                const item = document.createElement('div');
+                item.className = 'search-item';
+                item.textContent = `${f.name} (${f.cumulativeDistance.toFixed(1)} mi)`;
+                item.onclick = () => selectFeature(f, type, inputId, badgeId);
+                resultsDiv.appendChild(item);
+            });
+            resultsDiv.classList.add('show');
+        });
+    }
+
+    function selectFeature(feature, type, inputId, badgeId) {
+        const badge = document.getElementById(badgeId);
+        document.getElementById(inputId).value = feature.name;
+        badge.innerHTML = `✓ <strong>${feature.name}</strong><br>${feature.cumulativeDistance.toFixed(1)} mi`;
+        badge.classList.add('show');
+        document.getElementById(inputId.replace('Search', 'Results')).classList.remove('show');
+        if (type === 'start') { currentStart = feature; addMarker('start'); } 
+        else { currentEnd = feature; addMarker('end'); }
+    }
+
+    function addMarker(type) {
+        const feat = type === 'start' ? currentStart : currentEnd;
+        if (!feat) return;
+        if (type === 'start' && startMarker) map.removeLayer(startMarker);
+        if (type === 'end' && endMarker) map.removeLayer(endMarker);
+        
+        const marker = L.circleMarker([feat.latitude, feat.longitude], {
+            radius: 10, fillColor: type === 'start' ? '#28a745' : '#dc3545', color: 'white', weight: 2, fillOpacity: 0.9
+        }).bindPopup(type.toUpperCase() + ': ' + feat.name).addTo(map);
+        
+        if (type === 'start') startMarker = marker; else endMarker = marker;
+        updateRoute();
+    }
+
+    function haversineDistanceMeters(a, b) {
+        const R = 6371000, toRad = v => v * DEG_TO_RAD;
+        const dLat = toRad(b[0] - a[0]), dLon = toRad(b[1] - a[1]);
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
+    function splitOnJumps(coords, maxJump = SEGMENT_ATTACH_LIMIT_METERS) {
+        const segments = [];
+        let cur = [coords[0]];
+        for (let i = 1; i < coords.length; i++) {
+            if (haversineDistanceMeters(coords[i - 1], coords[i]) > maxJump) {
+                if (cur.length >= MIN_SEGMENT_POINTS) segments.push(cur);
+                cur = [coords[i]];
+            } else cur.push(coords[i]);
+        }
+        if (cur.length >= MIN_SEGMENT_POINTS) segments.push(cur);
+        return segments;
+    }
+
+    function findClosestIndex(coords, lat, lng) {
+        let min = Infinity, idx = 0;
+        coords.forEach((c, i) => {
+            const d = (c[0] - lat) ** 2 + (c[1] - lng) ** 2;
+            if (d < min) { min = d; idx = i; }
+        });
+        return idx;
+    }
+
+    function getCoordCanalDist(coord) {
+        let min = Infinity, best = 0;
+        testCorridor.features.forEach(f => {
+            const d = (f.latitude - coord[0]) ** 2 + (f.longitude - coord[1]) ** 2;
+            if (d < min) { min = d; best = f.cumulativeDistance; }
+        });
+        return best;
+    }
+
+    function buildOrderedCanalPath(byWayId) {
+        return Object.values(byWayId)
+            .map(way => {
+                const c = way.coords.slice();
+                if (getCoordCanalDist(c[0]) > getCoordCanalDist(c[c.length - 1])) c.reverse();
+                return { c, dist: getCoordCanalDist(c[0]) };
+            })
+            .sort((a, b) => a.dist - b.dist)
+            .flatMap(w => w.c);
+    }
+
+    function getPrimaryCanalCoords() {
+        return crtCanalGeometry || (overpassCanalsData ? overpassCanalsData.allCoords : []);
+    }
+
+    function getCanalPathBetween(sLat, sLng, eLat, eLng) {
+        const coords = getPrimaryCanalCoords();
+        if (coords.length < 2) return null;
+        const sIdx = findClosestIndex(coords, sLat, sLng);
+        const eIdx = findClosestIndex(coords, eLat, eLng);
+        return sIdx <= eIdx ? coords.slice(sIdx, eIdx + 1) : coords.slice(eIdx, sIdx + 1).reverse();
+    }
+
+    function updateRoute() {
+        if (!currentStart || !currentEnd) return;
+        if (routePolyline) map.removeLayer(routePolyline);
+        
+        const dist = Math.abs(currentEnd.cumulativeDistance - currentStart.cumulativeDistance);
+        const speed = parseFloat(document.getElementById('speed').value) || 3;
+        const time = dist / speed;
+        document.getElementById('routeDist').textContent = dist.toFixed(1);
+        document.getElementById('routeDur').textContent = `${Math.floor(time)}h ${Math.round((time % 1) * 60)}m`;
+        document.getElementById('routeInfo').style.display = 'block';
+
+        const path = getCanalPathBetween(currentStart.latitude, currentStart.longitude, currentEnd.latitude, currentEnd.longitude);
+        if (path) routePolyline = L.polyline(path, { color: '#28a745', weight: 4 }).addTo(map);
+    }
+
+    function calculateLookahead() {
+        if (!currentStart) return alert('Select a start point');
+        const speed = parseFloat(document.getElementById('speed').value);
+        const hours = parseFloat(document.getElementById('lookahead').value);
+        const maxD = currentStart.cumulativeDistance + (speed * hours);
+        
+        const activeFilters = new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value));
+        const features = testCorridor.features
+            .filter(f => f.cumulativeDistance > currentStart.cumulativeDistance && f.cumulativeDistance <= maxD && activeFilters.has(f.type))
+            .sort((a, b) => a.cumulativeDistance - b.cumulativeDistance);
+
+        const resultDiv = document.getElementById('results');
+        if (features.length === 0) { resultDiv.innerHTML = '<div class="empty-state">No features found</div>'; return; }
+
+        let html = `<div class="stats">
+            <div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">${features.length}</div></div>
+            <div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">${features.filter(f => f.type === 'lock').length}</div></div>
+        </div><div class="features-list">`;
+
+        clearMarkers();
+        features.forEach(f => {
+            const eta = (f.cumulativeDistance - currentStart.cumulativeDistance) / speed;
+            html += `<div class="feature-item" onclick="map.setView([${f.latitude},${f.longitude}],14)">
+                <span class="badge badge-${f.type}">${f.type.toUpperCase()}</span>
+                <strong>${f.name}</strong><br><small>${f.cumulativeDistance.toFixed(1)} mi | ETA: ${Math.floor(eta)}h ${Math.round((eta % 1) * 60)}m</small>
+            </div>`;
+            const m = L.circleMarker([f.latitude, f.longitude], { radius: 6, fillColor: '#007BFF', color: 'white', weight: 1, fillOpacity: 0.8 }).bindPopup(f.name).addTo(map);
+            markers.push(m);
+        });
+        resultDiv.innerHTML = html + '</div>';
+    }
+
+    function clearMarkers() {
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        if (polyline) map.removeLayer(polyline);
+    }
+
+    function setAllFilters(state) { document.querySelectorAll('.wp-filter').forEach(cb => cb.checked = state); }
+
+    function resetForm() {
+        location.reload(); // Simplest way to clear everything
+    }
+
+    window.onload = initMap;
+</script>
+</body>
+</html>
