@@ -83,34 +83,55 @@
     }
 
     // THE FIX: Calculate and Draw Curved Line
-    function calculateLookahead() {
-        if(!currentStart) return alert("Select a start point first");
-        
-        const speed = 3; // mph
-        const hours = parseFloat(document.getElementById('lookahead').value);
-        const maxDist = currentStart.cumulativeDistance + (speed * hours);
-        
-        // Find waypoints in range
-        const journeyFeatures = testCorridor.features.filter(f => 
-            f.cumulativeDistance > currentStart.cumulativeDistance && 
-            f.cumulativeDistance <= maxDist
-        ).sort((a,b) => a.cumulativeDistance - b.cumulativeDistance);
+   function calculateLookahead() {
+    if(!currentStart) return alert("Select a start point first");
+    
+    const speed = parseFloat(document.getElementById('speed')?.value || 3);
+    const hours = parseFloat(document.getElementById('lookahead').value);
+    const maxDist = currentStart.cumulativeDistance + (speed * hours);
+    
+    // 1. Get waypoints for the sidebar list
+    const journeyFeatures = testCorridor.features.filter(f => 
+        f.cumulativeDistance > currentStart.cumulativeDistance && 
+        f.cumulativeDistance <= maxDist
+    ).sort((a,b) => a.cumulativeDistance - b.cumulativeDistance);
 
-        // Clear Map
-        markers.forEach(m => map.removeLayer(m));
-        if(polyline) map.removeLayer(polyline);
+    // 2. Clear old map drawings
+    markers.forEach(m => map.removeLayer(m));
+    if(polyline) map.removeLayer(polyline);
 
-        // DRAW CURVED JOURNEY
-        // This connects the specific lat/lng points from your testCorridor.js
-        const pathCoords = journeyFeatures.map(f => [f.latitude, f.longitude]);
-        
-        if(pathCoords.length > 1) {
-            // We use weight 8 so it's a thick path following the canal
-            polyline = L.polyline(pathCoords, {color: '#667eea', weight: 8, opacity: 0.7}).addTo(map);
-            map.fitBounds(polyline.getBounds());
-        }
+    // 3. THE FIX: Pull the CURVED geometry
+    const routeEnd = journeyFeatures[journeyFeatures.length - 1];
+    let pathCoords = [];
 
-        // Add Markers & Sidebar
+    if (routeEnd) {
+        // This line is the 'bridge' to your high-detail canal data
+        pathCoords = getCanalPathBetween(currentStart.latitude, currentStart.longitude, routeEnd.latitude, routeEnd.longitude);
+    }
+
+    // 4. Fallback: If geometry is missing, use waypoints (prevents empty map)
+    if(!pathCoords || pathCoords.length < 2) {
+        pathCoords = journeyFeatures.map(f => [f.latitude, f.longitude]);
+        console.warn("Following waypoints only - Geometry path not found.");
+    }
+
+    // 5. Draw the path following the water
+    const segments = splitOnJumps(pathCoords, 400); 
+    polyline = L.layerGroup().addTo(map);
+    segments.forEach(seg => {
+        L.polyline(seg, {
+            color: '#667eea', 
+            weight: 6, 
+            opacity: 0.8,
+            lineJoin: 'round'
+        }).addTo(polyline);
+    });
+
+    if(pathCoords.length > 0) map.fitBounds(L.latLngBounds(pathCoords), {padding: [50, 50]});
+
+    // 6. Refresh the Sidebar and Markers (Your existing UI logic)
+    renderResults(journeyFeatures); 
+}        // Add Markers & Sidebar
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = '';
         
