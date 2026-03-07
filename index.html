@@ -1,666 +1,136 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
-<style>
-/* Glassmorphism Panel */
-.glass-panel {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 20px;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-    margin-bottom: 20px;
-}
-
-/* Modern Inputs */
-input, select, button {
-    border-radius: 8px !important;
-    border: 1px solid #ddd;
-    padding: 10px;
-}
-</style>
-  <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🚤 CanalPilot - Route Calculator</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#74ebd5,#acb6e5);padding:20px;min-height:100vh}
-.container{max-width:1600px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
-h1{grid-column:1/-1;text-align:center;color:white;font-size:28px;margin-bottom:20px}
-.panel{background:white;padding:20px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.1)}
-h2{color:#333;font-size:18px;margin-bottom:15px;border-bottom:2px solid #007BFF;padding-bottom:10px}
-.input-group{margin-bottom:15px}
-label{display:block;font-weight:bold;margin-bottom:5px;color:#555;font-size:13px}
-.search-box{width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:14px}
-.search-box:focus{outline:none;border-color:#007BFF}
-.search-results{position:absolute;background:white;border:2px solid #007BFF;border-top:none;border-radius:0 0 5px 5px;max-height:250px;overflow-y:auto;width:calc(100% - 4px);z-index:100;display:none}
-.search-results.show{display:block}
-.search-item{padding:8px;cursor:pointer;border-bottom:1px solid #eee;font-size:12px}
-.search-item:hover{background:#f0f8ff}
-.selected-badge{background:#e8f5e9;padding:8px;border-radius:5px;border-left:4px solid #28a745;font-size:12px;margin-top:8px;display:none}
-.selected-badge.show{display:block}
-.button-group{display:flex;gap:10px;margin:20px 0}
-button{flex:1;padding:10px;background-color:#007BFF;color:white;border:none;border-radius:5px;cursor:pointer;font-weight:bold}
-button:hover{background-color:#0056b3}
-#map{height:600px;border-radius:8px}
-.map-panel{grid-column:2/4;padding:0}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:15px 0}
-.stat-box{background:#f0f8ff;padding:12px;border-radius:5px;border-left:4px solid #007BFF;text-align:center}
-.stat-label{font-size:11px;color:#666}
-.stat-value{font-size:20px;font-weight:bold;color:#007BFF}
-.features-list{max-height:400px;overflow-y:auto}
-.feature-item{padding:10px;margin:8px 0;background:#f9f9f9;border-left:4px solid #007BFF;border-radius:4px;font-size:12px;cursor:pointer}
-.feature-item:hover{background:#f0f0f0}
-.badge{display:inline-block;padding:2px 6px;border-radius:10px;color:white;font-size:10px;font-weight:bold;margin-right:5px}
-.badge-lock{background:#ff6b6b}
-.badge-bridge{background:#4ecdc4}
-.badge-marina{background:#45b7d1}
-.badge-wharf{background:#96ceb4}
-.badge-water{background:#3498db}
-.badge-tunnel{background:#95a5a6}
-.badge-junction{background:#667eea}
-.badge-winding{background:#e74c3c}
-.badge-aqueduct{background:#f39c12}
-.filter-checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
-.filter-check-item{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px}
-.filter-check-item input{cursor:pointer}
-.filter-links{font-size:11px;margin-top:5px}
-.filter-links a{color:#007BFF;cursor:pointer;text-decoration:underline}
-.empty-state{text-align:center;padding:30px 10px;color:#999}
-.route-info{background:#e8f5e9;padding:10px;border-radius:5px;margin:10px 0;border-left:4px solid #28a745;font-size:12px}
-.route-warning{background:#fff4e5;padding:10px;border-radius:5px;margin:10px 0;border-left:4px solid #d97706;font-size:12px;color:#92400e}
-.search-container{position:relative}
-@media (max-width:1200px){
-  .container{grid-template-columns:1fr 1fr}
-  .map-panel{grid-column:1/-1}
-  h1{grid-column:1/-1}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚤 CanalPilot - Route Calculator</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* Your Modern Glassmorphism Styles */
+        body { font-family: sans-serif; background: linear-gradient(135deg,#74ebd5,#acb6e5); padding: 20px; min-height: 100vh; margin: 0; }
+        .container { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 350px 1fr 400px; gap: 20px; }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border-radius: 15px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+        #map { height: 600px; border-radius: 15px; width: 100%; }
+        .badge { padding: 4px 8px; border-radius: 10px; color: white; font-size: 10px; font-weight: bold; margin-bottom: 5px; display: inline-block; }
+        .badge-lock { background: #ff6b6b; }
+        .badge-bridge { background: #4ecdc4; }
+        .feature-item { background: white; margin: 10px 0; padding: 10px; border-radius: 8px; border-left: 5px solid #007BFF; }
+        input { width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc; margin: 5px 0; }
+        button { width: 100%; padding: 10px; background: #007BFF; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .search-results { background: white; border: 1px solid #ddd; max-height: 150px; overflow-y: auto; }
+        .search-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; }
+    </style>
 </head>
 <body>
+
 <h1>🚤 CanalPilot - Route Calculator</h1>
 <div class="container">
-<div class="panel">
-<h2>Route Setup</h2>
-<div class="input-group">
-<label>Start Point:</label>
-<div class="search-container">
-<input type="text" id="startSearch" class="search-box" placeholder="Type to search...">
-<div id="startResults" class="search-results"></div>
-</div>
-<div id="startBadge" class="selected-badge"></div>
-</div>
-<div class="input-group">
-<label>End Point:</label>
-<div class="search-container">
-<input type="text" id="endSearch" class="search-box" placeholder="Type to search...">
-<div id="endResults" class="search-results"></div>
-</div>
-<div id="endBadge" class="selected-badge"></div>
-</div>
-<div id="routeInfo" class="route-info" style="display:none">Distance: <strong id="routeDist">0</strong> mi | Duration: <strong id="routeDur">0</strong></div>
-<div id="routeWarning" class="route-warning" style="display:none"></div>
-<h2>Calculate</h2>
-<div class="input-group">
-<label>Speed (mph):</label>
-<input type="number" id="speed" value="3" min="0.5" max="10" step="0.5" class="search-box">
-</div>
-<div class="input-group">
-<label>Lookahead (hours):</label>
-<input type="number" id="lookahead" value="2" min="0.5" max="24" step="0.5" class="search-box">
-</div>
-<div class="input-group">
-<label>Filter Waypoints:</label>
-<div class="filter-checks">
-<label class="filter-check-item"><input type="checkbox" class="wp-filter" value="lock" checked> <span class="badge badge-lock">LOCK</span></label>
-<label class="filter-check-item"><input type="checkbox" class="wp-filter" value="bridge" checked> <span class="badge badge-bridge">BRIDGE</span></label>
-<label class="filter-check-item"><input type="checkbox" class="wp-filter" value="winding" checked> <span class="badge badge-winding">WINDING</span></label>
-<label class="filter-check-item"><input type="checkbox" class="wp-filter" value="marina" checked> <span class="badge badge-marina">MARINA</span></label>
-<label class="filter-check-item"><input type="checkbox" class="wp-filter" value="aqueduct" checked> <span class="badge badge-aqueduct">AQUEDUCT</span></label>
-<label class="filter-check-item"><input type="checkbox" class="wp-filter" value="wharf" checked> <span class="badge badge-wharf">WHARF</span></label>
-<label class="filter-check-item"><input type="checkbox" class="wp-filter" value="water" checked> <span class="badge badge-water">WATER</span></label>
-<label class="filter-check-item"><input type="checkbox" class="wp-filter" value="tunnel" checked> <span class="badge badge-tunnel">TUNNEL</span></label>
-<label class="filter-check-item"><input type="checkbox" class="wp-filter" value="junction" checked> <span class="badge badge-junction">JUNCTION</span></label>
-</div>
-<div class="filter-links"><a onclick="setAllFilters(true)">Select all</a> | <a onclick="setAllFilters(false)">Select none</a></div>
-</div>
-<div class="button-group">
-<button onclick="calculateLookahead()">Calculate</button>
-<button onclick="resetForm()">Reset</button>
-</div>
-</div>
-<div class="panel">
-<h2>Upcoming Features</h2>
-<div id="results">
-<div class="empty-state">Select start point and click Calculate</div>
-</div>
-</div>
-<div class="panel map-panel">
-<div id="map"></div>
-</div>
+    <div class="glass-panel">
+        <h3>Route Setup</h3>
+        <label>Start Point:</label>
+        <input type="text" id="startSearch" placeholder="Search waypoints...">
+        <div id="startResults" class="search-results"></div>
+        
+        <label style="margin-top:15px; display:block;">Lookahead (Hours):</label>
+        <input type="number" id="lookahead" value="2" step="0.5">
+        
+        <button onclick="calculateLookahead()">Calculate Journey</button>
+        <button onclick="resetForm()" style="background:#6c757d;">Reset</button>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="glass-panel" style="overflow-y: auto; max-height: 600px;">
+        <h3>Upcoming on your Route</h3>
+        <div id="results">Enter start and click calculate</div>
+    </div>
 </div>
 
 <script src="testCorridor.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
-let map;
-let markers=[];
-let polyline;
-let startMarker;
-let endMarker;
-let routePolyline;
-let currentStart=null;
-let currentEnd=null;
-let crtCanalGeometry=null;
-let crtCanalLayer=null;
-let overpassCanalLayers=[];
-let overpassCanalsData=null;
-let cachedOverpassCanals=null;
+    let map, markers = [], polyline, currentStart = null;
 
-// Leicester Line corridor (Norton to Foxton) bbox
-const BASE_BBOX={south:52.28,west:-1.18,north:52.66,east:-0.97};
-const BBOX_BUFFER=0.01;
-const BBOX={
-    south:BASE_BBOX.south-BBOX_BUFFER,
-    west:BASE_BBOX.west-BBOX_BUFFER,
-    north:BASE_BBOX.north+BBOX_BUFFER,
-    east:BASE_BBOX.east+BBOX_BUFFER
-};
-const BBOX_STR=`${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
-const SEGMENT_ATTACH_LIMIT_METERS=400;
-const MIN_SEGMENT_POINTS=2;
-const DEG_TO_RAD=Math.PI/180;
-
-const CRT_ENDPOINTS=[
-    'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
-    'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/Navigations/FeatureServer/0/query',
-    'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Waterways/FeatureServer/0/query'
-];
-
-const CRT_WHERE_CLAUSES=[
-    "NAV_UNIT_NAME LIKE '%Leicester Line%'",
-    "name LIKE '%Leicester Line%'",
-    "NAVIGATION_NAME LIKE '%Leicester Line%'",
-    "NAV_NAME LIKE '%Leicester Line%'"
-];
-
-async function fetchCRTCanalGeometry(){
-    if(crtCanalGeometry)return crtCanalGeometry;
-    for(const endpoint of CRT_ENDPOINTS){
-        for(const whereClause of CRT_WHERE_CLAUSES){
-            const params=new URLSearchParams({where:whereClause,outFields:'*',returnGeometry:true,f:'geojson'});
-            console.log('CRT WFS Query:',{url:endpoint,where:whereClause,timestamp:new Date().toISOString()});
-            try{
-                const response=await fetch(endpoint+'?'+params);
-                if(!response.ok){
-                    console.log('CRT WFS Response:',{status:response.status,features:0,timestamp:new Date().toISOString()});
-                    console.warn('CRT WFS: HTTP error',response.status,response.statusText);
-                    continue;
-                }
-                const data=await response.json();
-                console.log('CRT WFS Response:',{status:response.status,features:data.features?.length||0,timestamp:new Date().toISOString()});
-                if(data.error){console.warn('CRT WFS: API error',data.error.message||JSON.stringify(data.error));continue;}
-                if(data.features&&data.features.length>0){
-                    const wayMap={};
-                    data.features.forEach((feat,idx)=>{
-                        if(feat.geometry&&feat.geometry.coordinates){
-                            if(feat.geometry.type==='LineString'||feat.geometry.type==='MultiLineString'){
-                                const lines=feat.geometry.type==='MultiLineString'?feat.geometry.coordinates:[feat.geometry.coordinates];
-                                lines.forEach((line,lineIdx)=>{
-                                    wayMap[idx+'_'+lineIdx]={coords:line.map(c=>[c[1],c[0]])};
-                                });
-                            }
-                        }
-                    });
-                    const ordered=buildOrderedCanalPath(wayMap);
-                    if(ordered.length>0){
-                        crtCanalGeometry=ordered;
-                        console.log('CRT WFS: Loaded '+ordered.length+' coordinates for Leicester Line');
-                        return crtCanalGeometry;
-                    }
-                    console.warn('CRT WFS: Got',data.features.length,'features but no valid geometry');
-                }else{
-                    console.warn('CRT WFS: No features returned for endpoint',endpoint,'where:',whereClause);
-                }
-            }catch(e){
-                console.warn('CRT WFS: Fetch error for',endpoint+':',e.message);
-            }
-        }
+    // Initialize Map
+    function initMap() {
+        map = L.map('map').setView([52.36, -1.1], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        setupSearch();
     }
-    console.warn('CRT WFS: All CRT endpoints failed');
-    return null;
-}
 
-async function fetchOverpassCanalData(){
-    if(overpassCanalsData)return overpassCanalsData;
-    try{
-        const overpassQuery=`[out:json][timeout:25];(relation["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR});way(r);way["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR}););out body;>;out geom;`;
-        const overpassUrl='https://overpass-api.de/api/interpreter';
-        console.log('Overpass request bbox',BBOX_STR);
-        const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});
-        console.log('Overpass Response:',{status:response.status,timestamp:new Date().toISOString()});
-        if(!response.ok)throw new Error('HTTP '+response.status);
-        const data=await response.json();
-        if(!data.elements||data.elements.length===0){throw new Error('Empty response');}
-        overpassCanalsData=parseOverpassElements(data,'Overpass Leicester Line');
-        if(overpassCanalsData.allCoords.length>0){
-            cachedOverpassCanals=overpassCanalsData;
-            return overpassCanalsData;
-        }
-        throw new Error('Parsed Leicester Line geometry had no path');
-    }catch(e){
-        console.warn('Overpass Leicester Line fetch failed:',{reason:e.message||e});
-        return fetchOverpassAllCanals();
-    }
-}
-
-async function fetchOverpassAllCanals(){
-    try{
-        const overpassQuery=`[out:json][timeout:25];(relation["waterway"="canal"](${BBOX_STR});way(r);way["waterway"="canal"](${BBOX_STR}););out body;>;out geom;`;
-        const overpassUrl='https://overpass-api.de/api/interpreter';
-        console.log('Overpass request bbox',BBOX_STR);
-        const response=await fetch(overpassUrl,{method:'POST',body:'data='+encodeURIComponent(overpassQuery)});
-        if(!response.ok)throw new Error('HTTP '+response.status);
-        const data=await response.json();
-        const canalsData=parseOverpassElements(data,'Overpass All Canals');
-        if(canalsData.allCoords.length>0){
-            cachedOverpassCanals=canalsData;
-            return canalsData;
-        }
-        if(cachedOverpassCanals){
-            console.warn('Overpass all canals empty, reusing cached geometry');
-            return cachedOverpassCanals;
-        }
-        return null;
-    }catch(e){
-        console.warn('Overpass all canals fetch failed:',{reason:e.message||e});
-        if(cachedOverpassCanals){
-            console.warn('Reusing cached geometry after error');
-            return cachedOverpassCanals;
-        }
-        return null;
-    }
-}
-
-function parseOverpassElements(data,label){
-    const result={byWayId:{},allCoords:[]};
-    let wayCount=0,relationCount=0,pointCount=0;
-    try{
-        if(!data||!data.elements){
-            console.warn(label+' parse failure',{reason:'No elements'});
-            return result;
-        }
-        data.elements.forEach(el=>{
-            if(el.type==='relation'){
-                relationCount++;
-            }
-            if(el.type==='way'){
-                wayCount++;
-                if(el.geometry&&el.geometry.length>0){
-                    const coords=el.geometry.map(pt=>[pt.lat,pt.lon]);
-                    result.byWayId[el.id]={name:el.tags?.name||'Canal '+el.id,coords};
-                    pointCount+=coords.length;
-                }
-            }
-        });
-        result.allCoords=buildOrderedCanalPath(result.byWayId);
-        console.log(label+' parse summary',{ways:wayCount,relations:relationCount,totalPoints:pointCount,pathPoints:result.allCoords.length,hasPath:result.allCoords.length>0});
-        if(result.allCoords.length===0){
-            console.warn(label+' parse produced no path',{ways:wayCount,relations:relationCount,totalPoints:pointCount});
-        }
-    }catch(err){
-        console.warn(label+' parse failure',{reason:err.message});
-    }
-    return result;
-}
-
-function drawOverpassCanals(canalsData){
-    if(!canalsData||!canalsData.byWayId)return;
-    Object.keys(canalsData.byWayId).forEach(wayId=>{
-        const canal=canalsData.byWayId[wayId];
-        if(canal.coords.length>0){
-            const isLeicesterLine=canal.name.toLowerCase().includes('leicester');
-            const polylineLayer=L.polyline(canal.coords,{
-                color:isLeicesterLine?'#2563eb':'#6b7280',
-                weight:isLeicesterLine?4:2,
-                opacity:isLeicesterLine?0.85:0.6,
-                lineCap:'round',
-                lineJoin:'round'
-            }).addTo(map);
-            overpassCanalLayers.push(polylineLayer);
-            if(isLeicesterLine){
-                console.log('Drew Leicester Line with '+canal.coords.length+' coordinates');
-            }else{
-                console.log('Drew '+canal.name+' with '+canal.coords.length+' coordinates');
-            }
-        }
-    });
-}
-
-async function initMap(){
-    map=L.map('map').setView([52.36,-1.1],10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
-    setupSearch('startSearch','startResults','startBadge','start');
-    setupSearch('endSearch','endResults','endBadge','end');
-    const crtCoords=await fetchCRTCanalGeometry();
-    if(crtCoords){
-        console.log('Using CRT canal geometry');
-        const segments=splitOnJumps(crtCoords);
-        if(segments.length>0){
-            crtCanalLayer=L.layerGroup(segments.map(seg=>L.polyline(seg,{color:'#4a90d9',weight:3,opacity:0.7}))).addTo(map);
-        }else{
-            crtCanalLayer=L.polyline(crtCoords,{color:'#4a90d9',weight:3,opacity:0.7}).addTo(map);
-        }
-        return;
-    }
-    const canalsData=await fetchOverpassCanalData();
-    if(canalsData&&Object.keys(canalsData.byWayId).length>0){
-        console.log('Using Overpass canal geometry');
-        drawOverpassCanals(canalsData);
-        return;
-    }
-    console.warn('Both CRT and Overpass failed, drawing canal from testCorridor features');
-    const fallbackCoords=testCorridor.features.slice().sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance).map(f=>[f.latitude,f.longitude]);
-    if(fallbackCoords.length>0){crtCanalLayer=L.polyline(fallbackCoords,{color:'#4a90d9',weight:3,opacity:0.7}).addTo(map);}
-}
-
-function setupSearch(inputId,resultsId,badgeId,type){
-    const input=document.getElementById(inputId);
-    const resultsDiv=document.getElementById(resultsId);
-    input.addEventListener('input',function(){
-        const query=this.value.toLowerCase();
-        resultsDiv.innerHTML='';
-        if(query.length===0){
-            resultsDiv.classList.remove('show');
-            return;
-        }
-        const filtered=testCorridor.features.filter(f=>f.name.toLowerCase().includes(query)).slice(0,15);
-        if(filtered.length===0){
-            resultsDiv.innerHTML='<div class="search-item" style="color:#999;">No matches</div>';
-        }else{
-            filtered.forEach(f=>{
-                const item=document.createElement('div');
-                item.className='search-item';
-                item.textContent=f.name+' ('+f.cumulativeDistance.toFixed(1)+' mi)';
-                item.onclick=function(){selectFeature(f,type,inputId,badgeId);};
-                resultsDiv.appendChild(item);
+    // Search Logic
+    function setupSearch() {
+        const input = document.getElementById('startSearch');
+        const results = document.getElementById('startResults');
+        input.oninput = () => {
+            const query = input.value.toLowerCase();
+            results.innerHTML = '';
+            if(!query) return;
+            testCorridor.features.filter(f => f.name.toLowerCase().includes(query)).slice(0, 10).forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'search-item';
+                div.textContent = f.name;
+                div.onclick = () => { 
+                    currentStart = f; 
+                    input.value = f.name; 
+                    results.innerHTML = '';
+                    map.setView([f.latitude, f.longitude], 13);
+                };
+                results.appendChild(div);
             });
-        }
-        resultsDiv.classList.add('show');
-    });
-    document.addEventListener('click',function(e){
-        if(!e.target.closest('.search-container')){
-            resultsDiv.classList.remove('show');
-        }
-    });
-}
-
-function selectFeature(feature,type,inputId,badgeId){
-    const input=document.getElementById(inputId);
-    const badge=document.getElementById(badgeId);
-    input.value=feature.name;
-    badge.innerHTML='✓ <strong>'+feature.name+'</strong><br>'+feature.cumulativeDistance.toFixed(1)+' mi';
-    badge.classList.add('show');
-    document.getElementById(inputId.replace('Search','Results')).classList.remove('show');
-    if(type==='start'){
-        currentStart=feature;
-        addStartMarker();
-    }else{
-        currentEnd=feature;
-        addEndMarker();
+        };
     }
-}
 
-function addStartMarker(){
-    if(currentStart){
-        if(startMarker)map.removeLayer(startMarker);
-        startMarker=L.circleMarker([currentStart.latitude,currentStart.longitude],{radius:10,fillColor:'#28a745',color:'white',weight:2,fillOpacity:0.9}).bindPopup('START: '+currentStart.name).addTo(map);
-        updateRoute();
-    }
-}
-
-function addEndMarker(){
-    if(currentEnd){
-        if(endMarker)map.removeLayer(endMarker);
-        endMarker=L.circleMarker([currentEnd.latitude,currentEnd.longitude],{radius:10,fillColor:'#dc3545',color:'white',weight:2,fillOpacity:0.9}).bindPopup('END: '+currentEnd.name).addTo(map);
-        updateRoute();
-    }
-}
-
-/** Calculate haversine distance between two [lat,lng] points in meters. */
-function haversineDistanceMeters(a,b){
-    const R=6371000,toRad=v=>v*DEG_TO_RAD;
-    const dLat=toRad(b[0]-a[0]),dLon=toRad(b[1]-a[1]);
-    const lat1=toRad(a[0]),lat2=toRad(b[0]);
-    const sinLat=Math.sin(dLat/2),sinLon=Math.sin(dLon/2);
-    const h=sinLat*sinLat+Math.cos(lat1)*Math.cos(lat2)*sinLon*sinLon;
-    const sinHalfCentralAngle=Math.max(0,Math.min(1,Math.sqrt(h)));
-    return 2*R*Math.asin(sinHalfCentralAngle);
-}
-
-/** Split coordinates into segments whenever consecutive points jump over maxJumpMeters. */
-function splitOnJumps(coords,maxJumpMeters=SEGMENT_ATTACH_LIMIT_METERS){
-    if(!coords?.length)return [];
-    const segments=[];
-    let current=[coords[0]];
-    for(let i=1;i<coords.length;i++){
-        const d=haversineDistanceMeters(coords[i-1],coords[i]);
-        if(d>maxJumpMeters){
-            if(current.length>=MIN_SEGMENT_POINTS)segments.push(current);
-            current=[coords[i]];
-        }else{
-            current.push(coords[i]);
-        }
-    }
-    if(current.length>=MIN_SEGMENT_POINTS)segments.push(current);
-    return segments;
-}
-
-function findClosestIndex(coords,lat,lng){
-    let minDist=Infinity,closestIdx=0;
-    const cosLat=Math.cos(lat*DEG_TO_RAD);
-    for(let i=0;i<coords.length;i++){
-        const dlat=coords[i][0]-lat,dlng=(coords[i][1]-lng)*cosLat;
-        const d=dlat*dlat+dlng*dlng;
-        if(d<minDist){minDist=d;closestIdx=i;}
-    }
-    return closestIdx;
-}
-
-function getCoordCanalDist(coord){
-    const refFeatures=testCorridor.features;
-    if(!refFeatures||refFeatures.length===0)return 0;
-    let minD=Infinity,best=refFeatures[0];
-    const cosLat=Math.cos(coord[0]*DEG_TO_RAD);
-    for(const f of refFeatures){
-        const dlat=f.latitude-coord[0],dlng=(f.longitude-coord[1])*cosLat;
-        const d=dlat*dlat+dlng*dlng;
-        if(d<minD){minD=d;best=f;}
-    }
-    return best.cumulativeDistance;
-}
-
-function buildOrderedCanalPath(byWayId){
-    const ways=Object.values(byWayId).filter(w=>w.coords&&w.coords.length>0);
-    const orderedWays=ways.map(way=>{
-        const coords=way.coords.slice();
-        const firstDist=getCoordCanalDist(coords[0]);
-        const lastDist=getCoordCanalDist(coords[coords.length-1]);
-        if(firstDist>lastDist)coords.reverse();
-        return{coords,sortKey:getCoordCanalDist(coords[0])};
-    });
-    orderedWays.sort((a,b)=>a.sortKey-b.sortKey);
-    return orderedWays.flatMap(way=>way.coords);
-}
-
-function getPrimaryCanalCoords(){
-    if(crtCanalGeometry&&crtCanalGeometry.length>1)return crtCanalGeometry;
-    if(overpassCanalsData&&overpassCanalsData.allCoords&&overpassCanalsData.allCoords.length>1)return overpassCanalsData.allCoords;
-    if(cachedOverpassCanals&&cachedOverpassCanals.allCoords&&cachedOverpassCanals.allCoords.length>1){
-        console.log('Reusing cached Overpass geometry');
-        return cachedOverpassCanals.allCoords;
-    }
-    return [];
-}
-
-/** Return primary canal geometry split into contiguous segments. */
-function getPrimaryCanalSegments(){
-    const coords=getPrimaryCanalCoords();
-    const segments=splitOnJumps(coords);
-    if(segments.length>0)return segments;
-    if(coords&&coords.length>1)return[coords];
-    return [];
-}
-
-function getCanalPathBetween(startLat,startLng,endLat,endLng){
-    const coords=getPrimaryCanalCoords();
-    if(!coords||coords.length<2)return null;
-    const startIdx=findClosestIndex(coords,startLat,startLng);
-    const endIdx=findClosestIndex(coords,endLat,endLng);
-    if(startIdx<=endIdx)return coords.slice(startIdx,endIdx+1);
-    return coords.slice(endIdx,startIdx+1).reverse();
-}
- function updateRoute(){
-    if(currentStart && currentEnd){
-        // Clear old lines
-        if(routePolyline) map.removeLayer(routePolyline);
+    // THE FIX: Calculate and Draw Curved Line
+    function calculateLookahead() {
+        if(!currentStart) return alert("Select a start point first");
         
-        const dist = Math.abs(currentEnd.cumulativeDistance - currentStart.cumulativeDistance);
-        const speed = parseFloat(document.getElementById('speed').value) || 3;
-        const hours = Math.floor(dist/speed);
-        const mins = Math.round((dist/speed - hours) * 60);
+        const speed = 3; // mph
+        const hours = parseFloat(document.getElementById('lookahead').value);
+        const maxDist = currentStart.cumulativeDistance + (speed * hours);
         
-        document.getElementById('routeDist').textContent = dist.toFixed(1);
-        document.getElementById('routeDur').textContent = hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
-        document.getElementById('routeInfo').style.display = 'block';
+        // Find waypoints in range
+        const journeyFeatures = testCorridor.features.filter(f => 
+            f.cumulativeDistance > currentStart.cumulativeDistance && 
+            f.cumulativeDistance <= maxDist
+        ).sort((a,b) => a.cumulativeDistance - b.cumulativeDistance);
 
-        let pathCoords = getCanalPathBetween(currentStart.latitude, currentStart.longitude, currentEnd.latitude, currentEnd.longitude);
+        // Clear Map
+        markers.forEach(m => map.removeLayer(m));
+        if(polyline) map.removeLayer(polyline);
+
+        // DRAW CURVED JOURNEY
+        // This connects the specific lat/lng points from your testCorridor.js
+        const pathCoords = journeyFeatures.map(f => [f.latitude, f.longitude]);
         
-        if(!pathCoords || pathCoords.length < 2){
-            // Fallback logic
-            const minDist = Math.min(currentStart.cumulativeDistance, currentEnd.cumulativeDistance);
-            const maxDist = Math.max(currentStart.cumulativeDistance, currentEnd.cumulativeDistance);
-            pathCoords = testCorridor.features
-                .filter(f => f.cumulativeDistance >= minDist && f.cumulativeDistance <= maxDist)
-                .sort((a,b) => a.cumulativeDistance - b.cumulativeDistance)
-                .map(f => [f.latitude, f.longitude]);
+        if(pathCoords.length > 1) {
+            // We use weight 8 so it's a thick path following the canal
+            polyline = L.polyline(pathCoords, {color: '#667eea', weight: 8, opacity: 0.7}).addTo(map);
+            map.fitBounds(polyline.getBounds());
         }
 
-        // --- THE FIX: Split the path into segments to avoid "Crow Flies" lines ---
-        const segments = splitOnJumps(pathCoords, 400); 
-        routePolyline = L.layerGroup(); // Create a group to hold multiple segments
+        // Add Markers & Sidebar
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '';
         
-        segments.forEach(seg => {
-            L.polyline(seg, {
-                color: '#28a745', 
-                weight: 5, 
-                opacity: 0.8,
-                lineCap: 'round'
-            }).addTo(routePolyline);
+        journeyFeatures.forEach(f => {
+            // Map Marker
+            const m = L.circleMarker([f.latitude, f.longitude], {radius: 6, fillColor: '#007BFF', color: '#fff', weight: 2, fillOpacity: 1}).addTo(map);
+            markers.push(m);
+            
+            // Sidebar Item
+            resultsDiv.innerHTML += `
+                <div class="feature-item">
+                    <span class="badge badge-lock">${f.type.toUpperCase()}</span><br>
+                    <strong>${f.name}</strong><br>
+                    <small>${f.cumulativeDistance.toFixed(2)} mi</small>
+                </div>`;
         });
-        
-        routePolyline.addTo(map);
     }
-}
 
-function calculateLookahead(){
-    if(!currentStart){
-        alert('Select a start point');
-        return;
-    }
-    document.getElementById('routeWarning').style.display='none';
-    const speed=parseFloat(document.getElementById('speed').value);
-    const hours=parseFloat(document.getElementById('lookahead').value);
-    const distance=speed*hours;
-    const maxDist=currentStart.cumulativeDistance+distance;
-    const activeFilters=new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb=>cb.value));
-    const features=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist&&activeFilters.has(f.type)).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
-    const resultDiv=document.getElementById('results');
-    resultDiv.innerHTML='';
-    if(features.length===0){
-        resultDiv.innerHTML='<div class="empty-state">No features found</div>';
-        clearMarkers();
-        return;
-    }
-    const locks=features.filter(f=>f.type==='lock').length;
-    const bridges=features.filter(f=>f.type==='bridge').length;
-    const marinas=features.filter(f=>f.type==='marina').length;
-    let html='<div class="stats"><div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">'+features.length+'</div></div>';
-    html+='<div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">'+locks+'</div></div>';
-    html+='<div class="stat-box"><div class="stat-label">Bridges</div><div class="stat-value">'+bridges+'</div></div>';
-    html+='<div class="stat-box"><div class="stat-label">Marinas</div><div class="stat-value">'+marinas+'</div></div></div>';
-    html+='<div class="features-list">';
-    features.forEach(f=>{
-        const eta=(f.cumulativeDistance-currentStart.cumulativeDistance)/speed;
-        const h=Math.floor(eta);
-        const m=Math.round((eta-h)*60);
-        const timeStr=h>0?h+'h '+m+'m':m+'m';
-        html+='<div class="feature-item" onclick="map.setView(['+f.latitude+','+f.longitude+'],14)">';
-        html+='<span class="badge badge-'+f.type+'">'+f.type.toUpperCase()+'</span>';
-        html+='<strong>'+f.name+'</strong><br>';
-        html+='<small>'+f.cumulativeDistance.toFixed(1)+' mi | ETA: '+timeStr+'</small>';
-        html+='</div>';
-    });
-    html+='</div>';
-    resultDiv.innerHTML=html;
-    clearMarkers();
-    
-    const allFeaturesInWindow=testCorridor.features.filter(f=>f.cumulativeDistance>currentStart.cumulativeDistance&&f.cumulativeDistance<=maxDist).sort((a,b)=>a.cumulativeDistance-b.cumulativeDistance);
-    const routeEnd=allFeaturesInWindow.length>0?allFeaturesInWindow[allFeaturesInWindow.length-1]:(features.length>0?features[features.length-1]:null);
-    const warning=document.getElementById('routeWarning');
-    let pathCoords=routeEnd?getCanalPathBetween(currentStart.latitude,currentStart.longitude,routeEnd.latitude,routeEnd.longitude):null;
-    if(!pathCoords||pathCoords.length<2){
-        pathCoords=allFeaturesInWindow.length>0?allFeaturesInWindow.map(f=>[f.latitude,f.longitude]):[];
-        warning.textContent='Using fallback route (geometry unavailable).';
-        warning.style.display='block';
-    }else{
-        warning.style.display='none';
-    }
-    polyline=L.polyline(pathCoords,{color:'#667eea',weight:4,opacity:0.9}).addTo(map);
-    
-    features.forEach(f=>{
-        const colors={lock:'#ff6b6b',bridge:'#4ecdc4',marina:'#45b7d1',wharf:'#96ceb4',water:'#3498db',tunnel:'#95a5a6',junction:'#667eea',winding:'#e74c3c',aqueduct:'#f39c12'};
-        const m=L.circleMarker([f.latitude,f.longitude],{radius:6,fillColor:colors[f.type]||'#007BFF',color:'white',weight:1,fillOpacity:0.8}).bindPopup(f.name).addTo(map);
-        markers.push(m);
-    });
-    const allCoords=pathCoords.slice();
-    if(currentEnd)allCoords.push([currentEnd.latitude,currentEnd.longitude]);
-    const bounds=L.latLngBounds(allCoords);
-    map.fitBounds(bounds,{padding:[50,50]});
-}
-
-function clearMarkers(){
-    markers.forEach(m=>map.removeLayer(m));
-    markers=[];
-    if(polyline)map.removeLayer(polyline);
-    if(routePolyline)map.removeLayer(routePolyline);
-}
-
-function setAllFilters(state){
-    document.querySelectorAll('.wp-filter').forEach(cb=>cb.checked=state);
-}
-
-function resetForm(){
-    document.getElementById('startSearch').value='';
-    document.getElementById('endSearch').value='';
-    document.getElementById('startBadge').classList.remove('show');
-    document.getElementById('endBadge').classList.remove('show');
-    document.getElementById('speed').value='3';
-    document.getElementById('lookahead').value='2';
-    document.getElementById('results').innerHTML='<div class="empty-state">Select start point and click Calculate</div>';
-    document.getElementById('routeInfo').style.display='none';
-    document.getElementById('routeWarning').style.display='none';
-    currentStart=null;
-    currentEnd=null;
-    clearMarkers();
-    if(startMarker)map.removeLayer(startMarker);
-    if(endMarker)map.removeLayer(endMarker);
-}
-
-window.onload=function(){initMap();};
+    function resetForm() { location.reload(); }
+    window.onload = initMap;
 </script>
 </body>
 </html>
