@@ -471,16 +471,38 @@
             routePolyline = L.polyline(pathSegments, { color: '#28a745', weight: 4 }).addTo(map);
         }
     }
-    function calculateLookahead() {
+     function calculateLookahead() {
         if (!currentStart) return alert('Select a start point');
         const speed = parseFloat(document.getElementById('speed').value);
         const hours = parseFloat(document.getElementById('lookahead').value);
-        const maxD = currentStart.cumulativeDistance + (speed * hours);
+        const travelDist = speed * hours; // Total miles we can travel in this time
         
+        // 1. Figure out which way the boat is going
+        let isReverse = false;
+        if (currentEnd && currentEnd.cumulativeDistance < currentStart.cumulativeDistance) {
+            isReverse = true; // We are heading South (towards mile 0)
+        }
+
+        const startDist = currentStart.cumulativeDistance;
         const activeFilters = new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value));
-        const features = testCorridor.features
-            .filter(f => f.cumulativeDistance > currentStart.cumulativeDistance && f.cumulativeDistance <= maxD && activeFilters.has(f.type))
-            .sort((a, b) => a.cumulativeDistance - b.cumulativeDistance);
+        
+        // 2. Filter features based on direction
+        const features = testCorridor.features.filter(f => {
+            if (!activeFilters.has(f.type)) return false;
+            
+            if (isReverse) {
+                // Looking backwards: Feature must be less than start, but greater than our max travel distance
+                return f.cumulativeDistance < startDist && f.cumulativeDistance >= (startDist - travelDist);
+            } else {
+                // Looking forwards: Feature must be greater than start, but less than our max travel distance
+                return f.cumulativeDistance > startDist && f.cumulativeDistance <= (startDist + travelDist);
+            }
+        }).sort((a, b) => {
+            // 3. Sort so the closest features always appear first in the list!
+            return isReverse 
+                ? b.cumulativeDistance - a.cumulativeDistance 
+                : a.cumulativeDistance - b.cumulativeDistance;
+        });
 
         const resultDiv = document.getElementById('results');
         if (features.length === 0) { resultDiv.innerHTML = '<div class="empty-state">No features found</div>'; return; }
@@ -492,10 +514,14 @@
 
         clearMarkers();
         features.forEach(f => {
-            const eta = (f.cumulativeDistance - currentStart.cumulativeDistance) / speed;
+            // 4. Calculate absolute distance and ETA so we don't get negative times
+            const distToFeature = Math.abs(f.cumulativeDistance - startDist);
+            const eta = distToFeature / speed;
+            
             html += `<div class="feature-item" onclick="map.setView([${f.latitude},${f.longitude}],14)">
                 <span class="badge badge-${f.type}">${f.type.toUpperCase()}</span>
-                <strong>${f.name}</strong><br><small>${f.cumulativeDistance.toFixed(1)} mi | ETA: ${Math.floor(eta)}h ${Math.round((eta % 1) * 60)}m</small>
+                <strong>${f.name}</strong>
+<small>${distToFeature.toFixed(1)} mi away | ETA: ${Math.floor(eta)}h ${Math.round((eta % 1) * 60)}m</small>
             </div>`;
             const m = L.circleMarker([f.latitude, f.longitude], { radius: 6, fillColor: '#007BFF', color: 'white', weight: 1, fillOpacity: 0.8 }).bindPopup(f.name).addTo(map);
             markers.push(m);
