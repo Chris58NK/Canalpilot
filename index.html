@@ -7,128 +7,48 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg,#74ebd5,#acb6e5); padding:20px; min-height:100vh; }
         
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #74ebd5, #acb6e5);
-            padding: 20px;
-            min-height: 100vh;
+        /* Glassmorphism Panel */
+        .panel { 
+            background: rgba(255, 255, 255, 0.7); 
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px); 
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            padding: 20px; 
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); 
+            margin-bottom: 20px; 
         }
 
-        /* Glassmorphism Panel Integration */
-        .glass-panel, .panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 20px;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-            margin-bottom: 20px;
-        }
-
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-        }
-
-        h1 { grid-column: 1/-1; text-align: center; color: white; font-size: 28px; margin-bottom: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        h1 { grid-column: 1/-1; text-align: center; color: white; font-size: 28px; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         h2 { color: #333; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #007BFF; padding-bottom: 10px; }
 
         .input-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 13px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; font-size: 13px; }
 
-        input, select, .search-box {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px !important;
-            font-size: 14px;
-        }
-
-        .search-box:focus { outline: none; border-color: #007BFF; }
+        input, .search-box { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.9); }
+        input:focus { outline: none; border-color: #007BFF; box-shadow: 0 0 0 2px rgba(0,123,255,0.2); }
         
         .search-container { position: relative; }
-        .search-results {
-            position: absolute;
-            background: white;
-            border: 2px solid #007BFF;
-            border-top: none;
-            border-radius: 0 0 5px 5px;
-            max-height: 250px;
-            overflow-y: auto;
-            width: calc(100% - 4px);
-            z-index: 100;
-            display: none;
-        }
+        .search-results { position: absolute; background: white; border-radius: 0 0 8px 8px; max-height: 250px; overflow-y: auto; width: 100%; z-index: 1000; display: none; box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
         .search-results.show { display: block; }
-        .search-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 12px; }
-        .search-item:hover { background: #f0f8ff; }
+        .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; }
+        .search-item:hover { background: #f0f8ff; color: #007BFF; }
 
-        .selected-badge {
-            background: #e8f5e9;
-            padding: 8px;
-            border-radius: 5px;
-            border-left: 4px solid #28a745;
-            font-size: 12px;
-            margin-top: 8px;
-            display: none;
-        }
+        .selected-badge { background: #e8f5e9; padding: 10px; border-radius: 8px; border-left: 4px solid #28a745; font-size: 13px; margin-top: 10px; display: none; }
         .selected-badge.show { display: block; }
 
-        .button-group { display: flex; gap: 10px; margin: 20px 0; }
-        button {
-            flex: 1;
-            padding: 10px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        button:hover { background-color: #0056b3; }
+        button { width: 100%; padding: 12px; background: #007BFF; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; margin-top: 10px; }
+        button:hover { background: #0056b3; }
+        button.secondary { background: #6c757d; }
 
-        #map { height: 600px; border-radius: 8px; width: 100%; }
-        .map-panel { grid-column: 2/4; padding: 0; overflow: hidden; }
+        #map { height: 600px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); }
+        .map-panel { grid-column: 2/4; padding: 0; }
 
-        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .stat-box { background: #f0f8ff; padding: 12px; border-radius: 5px; border-left: 4px solid #007BFF; text-align: center; }
-        .stat-label { font-size: 11px; color: #666; }
-        .stat-value { font-size: 20px; font-weight: bold; color: #007BFF; }
-
-        .features-list { max-height: 400px; overflow-y: auto; }
-        .feature-item { padding: 10px; margin: 8px 0; background: #f9f9f9; border-left: 4px solid #007BFF; border-radius: 4px; font-size: 12px; cursor: pointer; }
-        .feature-item:hover { background: #f0f0f0; }
-
-        .badge { display: inline-block; padding: 2px 6px; border-radius: 10px; color: white; font-size: 10px; font-weight: bold; margin-right: 5px; }
-        .badge-lock { background: #ff6b6b; }
-        .badge-bridge { background: #4ecdc4; }
-        .badge-marina { background: #45b7d1; }
-        .badge-wharf { background: #96ceb4; }
-        .badge-water { background: #3498db; }
-        .badge-tunnel { background: #95a5a6; }
-        .badge-junction { background: #667eea; }
-        .badge-winding { background: #e74c3c; }
-        .badge-aqueduct { background: #f39c12; }
-
-        .filter-checks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
-        .filter-check-item { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; }
-        .filter-links { font-size: 11px; margin-top: 5px; }
-        .filter-links a { color: #007BFF; cursor: pointer; text-decoration: underline; }
-
-        .empty-state { text-align: center; padding: 30px 10px; color: #999; }
-        .route-info { background: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #28a745; font-size: 12px; }
-        .route-warning { background: #fff4e5; padding: 10px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #d97706; font-size: 12px; color: #92400e; }
-
-        @media (max-width: 1200px) {
-            .container { grid-template-columns: 1fr 1fr; }
-            .map-panel { grid-column: 1/-1; }
-        }
+        @media (max-width: 1100px) { .container { grid-template-columns: 1fr; } .map-panel { grid-column: 1; order: 2; } }
     </style>
 </head>
 <body>
@@ -141,7 +61,7 @@
         <div class="input-group">
             <label>Start Point:</label>
             <div class="search-container">
-                <input type="text" id="startSearch" class="search-box" placeholder="Type to search...">
+                <input type="text" id="startSearch" class="search-box" placeholder="Search for a location...">
                 <div id="startResults" class="search-results"></div>
             </div>
             <div id="startBadge" class="selected-badge"></div>
@@ -150,56 +70,25 @@
         <div class="input-group">
             <label>End Point:</label>
             <div class="search-container">
-                <input type="text" id="endSearch" class="search-box" placeholder="Type to search...">
+                <input type="text" id="endSearch" class="search-box" placeholder="Search for a destination...">
                 <div id="endResults" class="search-results"></div>
             </div>
             <div id="endBadge" class="selected-badge"></div>
         </div>
 
-        <div id="routeInfo" class="route-info" style="display:none">
-            Distance: <strong id="routeDist">0</strong> mi | Duration: <strong id="routeDur">0</strong>
-        </div>
-        <div id="routeWarning" class="route-warning" style="display:none"></div>
-
-        <h2>Settings</h2>
         <div class="input-group">
-            <label>Speed (mph):</label>
-            <input type="number" id="speed" value="3" min="0.5" max="10" step="0.5">
+            <label>Cruising Speed (mph):</label>
+            <input type="number" id="speed" value="3" min="1" max="6" step="0.5">
         </div>
 
-        <div class="input-group">
-            <label>Lookahead (hours):</label>
-            <input type="number" id="lookahead" value="2" min="0.5" max="24" step="0.5">
-        </div>
-
-        <div class="input-group">
-            <label>Filter Waypoints:</label>
-            <div class="filter-checks">
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="lock" checked> <span class="badge badge-lock">LOCK</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="bridge" checked> <span class="badge badge-bridge">BRIDGE</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="winding" checked> <span class="badge badge-winding">WINDING</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="marina" checked> <span class="badge badge-marina">MARINA</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="aqueduct" checked> <span class="badge badge-aqueduct">AQUEDUCT</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="wharf" checked> <span class="badge badge-wharf">WHARF</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="water" checked> <span class="badge badge-water">WATER</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="tunnel" checked> <span class="badge badge-tunnel">TUNNEL</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="junction" checked> <span class="badge badge-junction">JUNCTION</span></label>
-            </div>
-            <div class="filter-links">
-                <a onclick="setAllFilters(true)">Select all</a> | <a onclick="setAllFilters(false)">Select none</a>
-            </div>
-        </div>
-
-        <div class="button-group">
-            <button onclick="calculateLookahead()">Calculate</button>
-            <button onclick="resetForm()">Reset</button>
-        </div>
+        <button onclick="calculateRoute()">Calculate Route</button>
+        <button class="secondary" onclick="location.reload()">Reset Map</button>
     </div>
 
     <div class="panel">
-        <h2>Upcoming Features</h2>
+        <h2>Journey Details</h2>
         <div id="results">
-            <div class="empty-state">Select start point and click Calculate</div>
+            <p style="color:#666; text-align:center; padding-top:20px;">Select your start and end points to see distances and ETA.</p>
         </div>
     </div>
 
@@ -210,386 +99,91 @@
 
 <script src="testCorridor.js"></script>
 <script>
-    let map;
-    let markers = [];
-    let polyline;
-    let startMarker;
-    let endMarker;
-    let routePolyline;
-    let currentStart = null;
-    let currentEnd = null;
-    let crtCanalGeometry = null;
-    let crtCanalLayer = null;
-    let overpassCanalLayers = [];
-    let overpassCanalsData = null;
-    let cachedOverpassCanals = null;
+    let map, startMarker, endMarker, routePolyline;
+    let currentStart = null, currentEnd = null;
 
-    const BASE_BBOX = { south: 52.28, west: -1.18, north: 52.66, east: -0.97 };
-    const BBOX_BUFFER = 0.01;
-    const BBOX = {
-        south: BASE_BBOX.south - BBOX_BUFFER,
-        west: BASE_BBOX.west - BBOX_BUFFER,
-        north: BASE_BBOX.north + BBOX_BUFFER,
-        east: BASE_BBOX.east + BBOX_BUFFER
-    };
-    const BBOX_STR = `${BBOX.south},${BBOX.west},${BBOX.north},${BBOX.east}`;
-    const SEGMENT_ATTACH_LIMIT_METERS = 400;
-    const MIN_SEGMENT_POINTS = 2;
-    const DEG_TO_RAD = Math.PI / 180;
+    function initMap() {
+        map = L.map('map').setView([52.4, -1.1], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
 
-    const CRT_ENDPOINTS = [
-        'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Navigations/FeatureServer/0/query',
-        'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/Navigations/FeatureServer/0/query',
-        'https://services1.arcgis.com/xHoJlKZRLtpEoGqB/arcgis/rest/services/CRT_Waterways/FeatureServer/0/query'
-    ];
-
-    const CRT_WHERE_CLAUSES = [
-        "NAV_UNIT_NAME LIKE '%Leicester Line%'",
-        "name LIKE '%Leicester Line%'",
-        "NAVIGATION_NAME LIKE '%Leicester Line%'",
-        "NAV_NAME LIKE '%Leicester Line%'"
-    ];
-
-    async function fetchCRTCanalGeometry() {
-        if (crtCanalGeometry) return crtCanalGeometry;
-        for (const endpoint of CRT_ENDPOINTS) {
-            for (const whereClause of CRT_WHERE_CLAUSES) {
-                const params = new URLSearchParams({ where: whereClause, outFields: '*', returnGeometry: true, f: 'geojson' });
-                try {
-                    const response = await fetch(endpoint + '?' + params);
-                    if (!response.ok) continue;
-                    const data = await response.json();
-                    if (data.features && data.features.length > 0) {
-                        const wayMap = {};
-                        data.features.forEach((feat, idx) => {
-                            if (feat.geometry && feat.geometry.coordinates) {
-                                const lines = feat.geometry.type === 'MultiLineString' ? feat.geometry.coordinates : [feat.geometry.coordinates];
-                                lines.forEach((line, lineIdx) => {
-                                    wayMap[idx + '_' + lineIdx] = { coords: line.map(c => [c[1], c[0]]) };
-                                });
-                            }
-                        });
-                        const ordered = buildOrderedCanalPath(wayMap);
-                        if (ordered.length > 0) {
-                            crtCanalGeometry = ordered;
-                            return crtCanalGeometry;
-                        }
-                    }
-                } catch (e) { console.warn('CRT Fetch error', e); }
-            }
-        }
-        return null;
-    }
-
-    async function fetchOverpassCanalData() {
-        if (overpassCanalsData) return overpassCanalsData;
-        try {
-            const overpassQuery = `[out:json][timeout:25];(relation["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR});way(r);way["waterway"="canal"]["name"~"Leicester Line|Leicester Navigation"](${BBOX_STR}););out body;>;out geom;`;
-            const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(overpassQuery) });
-            const data = await response.json();
-            overpassCanalsData = parseOverpassElements(data, 'Overpass Leicester Line');
-            return overpassCanalsData;
-        } catch (e) { return fetchOverpassAllCanals(); }
-    }
-
-    async function fetchOverpassAllCanals() {
-        try {
-            const overpassQuery = `[out:json][timeout:25];(relation["waterway"="canal"](${BBOX_STR});way(r);way["waterway"="canal"](${BBOX_STR}););out body;>;out geom;`;
-            const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(overpassQuery) });
-            const data = await response.json();
-            return parseOverpassElements(data, 'Overpass All Canals');
-        } catch (e) { return null; }
-    }
-
-    function parseOverpassElements(data, label) {
-        const result = { byWayId: {}, allCoords: [] };
-        if (!data || !data.elements) return result;
-        data.elements.forEach(el => {
-            if (el.type === 'way' && el.geometry) {
-                const coords = el.geometry.map(pt => [pt.lat, pt.lon]);
-                result.byWayId[el.id] = { name: el.tags?.name || 'Canal ' + el.id, coords };
-            }
-        });
-        result.allCoords = buildOrderedCanalPath(result.byWayId);
-        return result;
-    }
-
-    function drawOverpassCanals(canalsData) {
-        if (!canalsData || !canalsData.byWayId) return;
-        Object.keys(canalsData.byWayId).forEach(wayId => {
-            const canal = canalsData.byWayId[wayId];
-            const isLeicesterLine = canal.name.toLowerCase().includes('leicester');
-            const polylineLayer = L.polyline(canal.coords, {
-                color: isLeicesterLine ? '#2563eb' : '#6b7280',
-                weight: isLeicesterLine ? 4 : 2,
-                opacity: 0.8
-            }).addTo(map);
-            overpassCanalLayers.push(polylineLayer);
-        });
-    }
-
-    async function initMap() {
-        map = L.map('map').setView([52.36, -1.1], 10);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-        
         setupSearch('startSearch', 'startResults', 'startBadge', 'start');
         setupSearch('endSearch', 'endResults', 'endBadge', 'end');
-
-        const crtCoords = await fetchCRTCanalGeometry();
-        if (crtCoords) {
-            const segments = splitOnJumps(crtCoords);
-            crtCanalLayer = L.layerGroup(segments.map(seg => L.polyline(seg, { color: '#4a90d9', weight: 3 }))).addTo(map);
-            return;
-        }
-        const canalsData = await fetchOverpassCanalData();
-        if (canalsData) drawOverpassCanals(canalsData);
     }
 
     function setupSearch(inputId, resultsId, badgeId, type) {
         const input = document.getElementById(inputId);
         const resultsDiv = document.getElementById(resultsId);
+        
         input.addEventListener('input', function() {
             const query = this.value.toLowerCase();
             resultsDiv.innerHTML = '';
-            if (query.length === 0) { resultsDiv.classList.remove('show'); return; }
-            const filtered = testCorridor.features.filter(f => f.name.toLowerCase().includes(query)).slice(0, 15);
-            filtered.forEach(f => {
+            if (!query) { resultsDiv.classList.remove('show'); return; }
+
+            const matches = testCorridor.features
+                .filter(f => f.name.toLowerCase().includes(query))
+                .slice(0, 10);
+
+            matches.forEach(f => {
                 const item = document.createElement('div');
                 item.className = 'search-item';
                 item.textContent = `${f.name} (${f.cumulativeDistance.toFixed(1)} mi)`;
-                item.onclick = () => selectFeature(f, type, inputId, badgeId);
+                item.onclick = () => selectLocation(f, type, inputId, badgeId);
                 resultsDiv.appendChild(item);
             });
             resultsDiv.classList.add('show');
         });
     }
 
-    function selectFeature(feature, type, inputId, badgeId) {
+    function selectLocation(feature, type, inputId, badgeId) {
         const badge = document.getElementById(badgeId);
         document.getElementById(inputId).value = feature.name;
-        badge.innerHTML = `✓ <strong>${feature.name}</strong><br>${feature.cumulativeDistance.toFixed(1)} mi`;
-        badge.classList.add('show');
         document.getElementById(inputId.replace('Search', 'Results')).classList.remove('show');
-        if (type === 'start') { currentStart = feature; addMarker('start'); } 
-        else { currentEnd = feature; addMarker('end'); }
-    }
-
-    function addMarker(type) {
-        const feat = type === 'start' ? currentStart : currentEnd;
-        if (!feat) return;
-        if (type === 'start' && startMarker) map.removeLayer(startMarker);
-        if (type === 'end' && endMarker) map.removeLayer(endMarker);
         
-        const marker = L.circleMarker([feat.latitude, feat.longitude], {
-            radius: 10, fillColor: type === 'start' ? '#28a745' : '#dc3545', color: 'white', weight: 2, fillOpacity: 0.9
-        }).bindPopup(type.toUpperCase() + ': ' + feat.name).addTo(map);
-        
-        if (type === 'start') startMarker = marker; else endMarker = marker;
-        updateRoute();
-    }
+        badge.innerHTML = `<strong>Selected:</strong> ${feature.name}<br><small>Mile: ${feature.cumulativeDistance.toFixed(1)}</small>`;
+        badge.classList.add('show');
 
-    function haversineDistanceMeters(a, b) {
-        const R = 6371000, toRad = v => v * DEG_TO_RAD;
-        const dLat = toRad(b[0] - a[0]), dLon = toRad(b[1] - a[1]);
-        const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2;
-        return 2 * R * Math.asin(Math.sqrt(h));
-    }
-
-    function splitOnJumps(coords, maxJump = SEGMENT_ATTACH_LIMIT_METERS) {
-        const segments = [];
-        let cur = [coords[0]];
-        for (let i = 1; i < coords.length; i++) {
-            if (haversineDistanceMeters(coords[i - 1], coords[i]) > maxJump) {
-                if (cur.length >= MIN_SEGMENT_POINTS) segments.push(cur);
-                cur = [coords[i]];
-            } else cur.push(coords[i]);
+        if (type === 'start') {
+            currentStart = feature;
+            if (startMarker) map.removeLayer(startMarker);
+            startMarker = L.circleMarker([feature.latitude, feature.longitude], {radius: 8, color: '#28a745', fillOpacity: 0.8}).addTo(map);
+        } else {
+            currentEnd = feature;
+            if (endMarker) map.removeLayer(endMarker);
+            endMarker = L.circleMarker([feature.latitude, feature.longitude], {radius: 8, color: '#dc3545', fillOpacity: 0.8}).addTo(map);
         }
-        if (cur.length >= MIN_SEGMENT_POINTS) segments.push(cur);
-        return segments;
+        
+        if (currentStart && currentEnd) calculateRoute();
     }
 
-    function findClosestIndex(coords, lat, lng) {
-        let min = Infinity, idx = 0;
-        coords.forEach((c, i) => {
-            const d = (c[0] - lat) ** 2 + (c[1] - lng) ** 2;
-            if (d < min) { min = d; idx = i; }
-        });
-        return idx;
-    }
-
-    function getCoordCanalDist(coord) {
-        let min = Infinity, best = 0;
-        testCorridor.features.forEach(f => {
-            const d = (f.latitude - coord[0]) ** 2 + (f.longitude - coord[1]) ** 2;
-            if (d < min) { min = d; best = f.cumulativeDistance; }
-        });
-        return best;
-    }
-
-    function buildOrderedCanalPath(byWayId) {
-        return Object.values(byWayId)
-            .map(way => {
-                const c = way.coords.slice();
-                if (getCoordCanalDist(c[0]) > getCoordCanalDist(c[c.length - 1])) c.reverse();
-                return { c, dist: getCoordCanalDist(c[0]) };
-            })
-            .sort((a, b) => a.dist - b.dist)
-            .flatMap(w => w.c);
-    }
-
-    function getPrimaryCanalCoords() {
-        return crtCanalGeometry || (overpassCanalsData ? overpassCanalsData.allCoords : []);
-    }
-
-    function getCanalPathBetween(sLat, sLng, eLat, eLng) {
-        const coords = getPrimaryCanalCoords();
-        if (coords.length < 2) return null;
-        const sIdx = findClosestIndex(coords, sLat, sLng);
-        const eIdx = findClosestIndex(coords, eLat, eLng);
-        return sIdx <= eIdx ? coords.slice(sIdx, eIdx + 1) : coords.slice(eIdx, sIdx + 1).reverse();
-    }
-
-    function updateRoute() {
+    function calculateRoute() {
         if (!currentStart || !currentEnd) return;
         if (routePolyline) map.removeLayer(routePolyline);
-        
-        const dist = Math.abs(currentEnd.cumulativeDistance - currentStart.cumulativeDistance);
+
         const speed = parseFloat(document.getElementById('speed').value) || 3;
+        const dist = Math.abs(currentEnd.cumulativeDistance - currentStart.cumulativeDistance);
         const time = dist / speed;
-        document.getElementById('routeDist').textContent = dist.toFixed(1);
-        document.getElementById('routeDur').textContent = `${Math.floor(time)}h ${Math.round((time % 1) * 60)}m`;
-        document.getElementById('routeInfo').style.display = 'block';
-
-        const path = getCanalPathBetween(currentStart.latitude, currentStart.longitude, currentEnd.latitude, currentEnd.longitude);
-        if (path) routePolyline = L.polyline(path, { color: '#28a745', weight: 4 }).addTo(map);
-    }
-
-    function calculateLookahead() {
-        if (!currentStart) return alert('Select a start point');
-        const speed = parseFloat(document.getElementById('speed').value);
-        const hours = parseFloat(document.getElementById('lookahead').value);
-        const maxD = currentStart.cumulativeDistance + (speed * hours);
         
-        const activeFilters = new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value));
-        const features = testCorridor.features
-            .filter(f => f.cumulativeDistance > currentStart.cumulativeDistance && f.cumulativeDistance <= maxD && activeFilters.has(f.type))
-            .sort((a, b) => a.cumulativeDistance - b.cumulativeDistance);
+        const path = testCorridor.features
+            .filter(f => f.cumulativeDistance >= Math.min(currentStart.cumulativeDistance, currentEnd.cumulativeDistance) && 
+                         f.cumulativeDistance <= Math.max(currentStart.cumulativeDistance, currentEnd.cumulativeDistance))
+            .sort((a,b) => a.cumulativeDistance - b.cumulativeDistance)
+            .map(f => [f.latitude, f.longitude]);
 
-        const resultDiv = document.getElementById('results');
-        if (features.length === 0) { resultDiv.innerHTML = '<div class="empty-state">No features found</div>'; return; }
+        routePolyline = L.polyline(path, {color: '#007BFF', weight: 5, opacity: 0.7}).addTo(map);
+        map.fitBounds(routePolyline.getBounds(), {padding: [30, 30]});
 
-        let html = `<div class="stats">
-            <div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">${features.length}</div></div>
-            <div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">${features.filter(f => f.type === 'lock').length}</div></div>
-        </div><div class="features-list">`;
-
-        clearMarkers();
-        features.forEach(f => {
-            const eta = (f.cumulativeDistance - currentStart.cumulativeDistance) / speed;
-            html += `<div class="feature-item" onclick="map.setView([${f.latitude},${f.longitude}],14)">
-                <span class="badge badge-${f.type}">${f.type.toUpperCase()}</span>
-                <strong>${f.name}</strong><br><small>${f.cumulativeDistance.toFixed(1)} mi | ETA: ${Math.floor(eta)}h ${Math.round((eta % 1) * 60)}m</small>
-            </div>`;
-            const m = L.circleMarker([f.latitude, f.longitude], { radius: 6, fillColor: '#007BFF', color: 'white', weight: 1, fillOpacity: 0.8 }).bindPopup(f.name).addTo(map);
-            markers.push(m);
-        });
-        resultDiv.innerHTML = html + '</div>';
+        document.getElementById('results').innerHTML = `
+            <div style="text-align:center;">
+                <h3 style="color:#007BFF; font-size:24px;">${dist.toFixed(1)} miles</h3>
+                <p>Estimated Time: <strong>${Math.floor(time)}h ${Math.round((time % 1) * 60)}m</strong></p>
+                <p style="font-size:12px; color:#666; margin-top:10px;">(Calculated at ${speed} mph)</p>
+            </div>
+        `;
     }
 
-    function clearMarkers() {
-        markers.forEach(m => map.removeLayer(m));
-        markers = [];
-        if (polyline) map.removeLayer(polyline);
-    }
-
-    function setAllFilters(state) { document.querySelectorAll('.wp-filter').forEach(cb => cb.checked = state); }
-
-    function resetForm() {
-        location.reload(); // Simplest way to clear everything
-    }
-function calculateLookahead() {
-    if (!currentStart) {
-        alert('Select a start point');
-        return;
-    }
-
-    const speed = parseFloat(document.getElementById('speed').value) || 3;
-    const hours = parseFloat(document.getElementById('lookahead').value) || 2;
-    const lookaheadDistance = speed * hours;
-    const maxDist = currentStart.cumulativeDistance + lookaheadDistance;
-
-    // 1. Filter features for the Results List based on UI checkboxes
-    const activeFilters = new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value));
-    const listFeatures = testCorridor.features.filter(f => 
-        f.cumulativeDistance > currentStart.cumulativeDistance && 
-        f.cumulativeDistance <= maxDist && 
-        activeFilters.has(f.type)
-    ).sort((a, b) => a.cumulativeDistance - b.cumulativeDistance);
-
-    // 2. Clear existing map overlays
-    clearMarkers();
-
-    const resultDiv = document.getElementById('results');
-    if (listFeatures.length === 0) {
-        resultDiv.innerHTML = '<div class="empty-state">No features found in this range</div>';
-        return;
-    }
-
-    // 3. Update the Stats and List UI
-    updateResultsUI(listFeatures, speed);
-
-    // 4. Draw the DETAILED canal path (Fixes the straight green line)
-    const pathCoords = testCorridor.features
-        .filter(f => f.cumulativeDistance >= currentStart.cumulativeDistance && f.cumulativeDistance <= maxDist)
-        .sort((a, b) => a.cumulativeDistance - b.cumulativeDistance)
-        .map(f => [f.latitude, f.longitude]);
-
-    if (pathCoords.length >= 2) {
-        polyline = L.polyline(pathCoords, {color: '#28a745', weight: 5, opacity: 0.8}).addTo(map);
-        map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
-    }
-
-    // 5. Add Markers for filtered features (Locks, Bridges, etc.)
-    listFeatures.forEach(f => {
-        const colors = {
-            lock: '#ff6b6b', bridge: '#4ecdc4', marina: '#45b7d1', 
-            wharf: '#96ceb4', water: '#3498db', tunnel: '#95a5a6', 
-            junction: '#667eea', winding: '#e74c3c', aqueduct: '#f39c12'
-        };
-
-        const m = L.circleMarker([f.latitude, f.longitude], {
-            radius: 7,
-            fillColor: colors[f.type] || '#007BFF',
-            color: 'white',
-            weight: 2,
-            fillOpacity: 0.9
-        }).bindPopup(`<strong>${f.name}</strong><br>Type: ${f.type.toUpperCase()}`).addTo(map);
-        
-        markers.push(m);
-    });
-}
-
-function updateResultsUI(features, speed) {
-    const locks = features.filter(f => f.type === 'lock').length;
-    const bridges = features.filter(f => f.type === 'bridge').length;
-    
-    let html = `<div class="stats">
-        <div class="stat-box"><div class="stat-label">Features</div><div class="stat-value">${features.length}</div></div>
-        <div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">${locks}</div></div>
-    </div><div class="features-list">`;
-
-    features.forEach(f => {
-        const eta = (f.cumulativeDistance - currentStart.cumulativeDistance) / speed;
-        const h = Math.floor(eta);
-        const m = Math.round((eta - h) * 60);
-        html += `<div class="feature-item" onclick="map.setView([${f.latitude}, ${f.longitude}], 15)">
-            <span class="badge badge-${f.type}">${f.type.toUpperCase()}</span>
-            <strong>${f.name}</strong><br>
-            <small>${f.cumulativeDistance.toFixed(2)} mi | ETA: ${h > 0 ? h + 'h ' : ''}${m}m</small>
-        </div>`;
-    });
-    document.getElementById('results').innerHTML = html + '</div>';
-}    window.onload = initMap;
+    window.onload = initMap;
 </script>
 </body>
 </html>
