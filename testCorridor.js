@@ -1,6 +1,6 @@
 // testCorridor.js
 
- const testCorridor = {
+const testCorridor = {
   features: [
     { id: 1, name: "Norton Junction", type: "junction", latitude: 52.28586603, longitude: -1.118194073, cumulativeDistance: 0 },
     { id: 2, name: "Norton Junction Bridge No 1", type: "bridge", latitude: 52.28611165, longitude: -1.118750721, cumulativeDistance: 0.03 },
