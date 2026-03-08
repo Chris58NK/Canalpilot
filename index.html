@@ -507,8 +507,89 @@
     function resetForm() {
         location.reload(); // Simplest way to clear everything
     }
+function calculateLookahead() {
+    if (!currentStart) {
+        alert('Select a start point');
+        return;
+    }
 
-    window.onload = initMap;
+    const speed = parseFloat(document.getElementById('speed').value) || 3;
+    const hours = parseFloat(document.getElementById('lookahead').value) || 2;
+    const lookaheadDistance = speed * hours;
+    const maxDist = currentStart.cumulativeDistance + lookaheadDistance;
+
+    // 1. Filter features for the Results List based on UI checkboxes
+    const activeFilters = new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value));
+    const listFeatures = testCorridor.features.filter(f => 
+        f.cumulativeDistance > currentStart.cumulativeDistance && 
+        f.cumulativeDistance <= maxDist && 
+        activeFilters.has(f.type)
+    ).sort((a, b) => a.cumulativeDistance - b.cumulativeDistance);
+
+    // 2. Clear existing map overlays
+    clearMarkers();
+
+    const resultDiv = document.getElementById('results');
+    if (listFeatures.length === 0) {
+        resultDiv.innerHTML = '<div class="empty-state">No features found in this range</div>';
+        return;
+    }
+
+    // 3. Update the Stats and List UI
+    updateResultsUI(listFeatures, speed);
+
+    // 4. Draw the DETAILED canal path (Fixes the straight green line)
+    const pathCoords = testCorridor.features
+        .filter(f => f.cumulativeDistance >= currentStart.cumulativeDistance && f.cumulativeDistance <= maxDist)
+        .sort((a, b) => a.cumulativeDistance - b.cumulativeDistance)
+        .map(f => [f.latitude, f.longitude]);
+
+    if (pathCoords.length >= 2) {
+        polyline = L.polyline(pathCoords, {color: '#28a745', weight: 5, opacity: 0.8}).addTo(map);
+        map.fitBounds(polyline.getBounds(), {padding: [50, 50]});
+    }
+
+    // 5. Add Markers for filtered features (Locks, Bridges, etc.)
+    listFeatures.forEach(f => {
+        const colors = {
+            lock: '#ff6b6b', bridge: '#4ecdc4', marina: '#45b7d1', 
+            wharf: '#96ceb4', water: '#3498db', tunnel: '#95a5a6', 
+            junction: '#667eea', winding: '#e74c3c', aqueduct: '#f39c12'
+        };
+
+        const m = L.circleMarker([f.latitude, f.longitude], {
+            radius: 7,
+            fillColor: colors[f.type] || '#007BFF',
+            color: 'white',
+            weight: 2,
+            fillOpacity: 0.9
+        }).bindPopup(`<strong>${f.name}</strong><br>Type: ${f.type.toUpperCase()}`).addTo(map);
+        
+        markers.push(m);
+    });
+}
+
+function updateResultsUI(features, speed) {
+    const locks = features.filter(f => f.type === 'lock').length;
+    const bridges = features.filter(f => f.type === 'bridge').length;
+    
+    let html = `<div class="stats">
+        <div class="stat-box"><div class="stat-label">Features</div><div class="stat-value">${features.length}</div></div>
+        <div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">${locks}</div></div>
+    </div><div class="features-list">`;
+
+    features.forEach(f => {
+        const eta = (f.cumulativeDistance - currentStart.cumulativeDistance) / speed;
+        const h = Math.floor(eta);
+        const m = Math.round((eta - h) * 60);
+        html += `<div class="feature-item" onclick="map.setView([${f.latitude}, ${f.longitude}], 15)">
+            <span class="badge badge-${f.type}">${f.type.toUpperCase()}</span>
+            <strong>${f.name}</strong><br>
+            <small>${f.cumulativeDistance.toFixed(2)} mi | ETA: ${h > 0 ? h + 'h ' : ''}${m}m</small>
+        </div>`;
+    });
+    document.getElementById('results').innerHTML = html + '</div>';
+}    window.onload = initMap;
 </script>
 </body>
 </html>
