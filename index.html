@@ -461,9 +461,16 @@
         document.getElementById('routeInfo').style.display = 'block';
 
         const path = getCanalPathBetween(currentStart.latitude, currentStart.longitude, currentEnd.latitude, currentEnd.longitude);
-        if (path) routePolyline = L.polyline(path, { color: '#28a745', weight: 4 }).addTo(map);
-    }
+        
+        if (path) {
+            // --- YOUR OLD CODE (Safely hidden!) ---
+            // routePolyline = L.polyline(path, { color: '#28a745', weight: 4 }).addTo(map);
 
+            // --- THE NEW FIX ---
+            const pathSegments = splitOnJumps(path);
+            routePolyline = L.polyline(pathSegments, { color: '#28a745', weight: 4 }).addTo(map);
+        }
+    }
     function calculateLookahead() {
         if (!currentStart) return alert('Select a start point');
         const speed = parseFloat(document.getElementById('speed').value);
