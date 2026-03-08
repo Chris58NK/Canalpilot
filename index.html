@@ -501,65 +501,73 @@
             routePolyline = L.polyline(pathSegments, { color: '#28a745', weight: 4 }).addTo(map);
         }
     }
-     function calculateLookahead() {
+    function calculateLookahead() {
         if (!currentStart) return alert('Select a start point');
         const speed = parseFloat(document.getElementById('speed').value);
         const hours = parseFloat(document.getElementById('lookahead').value);
-        const travelDist = speed * hours; // Total miles we can travel in this time
+        const travelDist = speed * hours; // Total miles we can travel
         
-        // 1. Figure out which way the boat is going
-        let isReverse = false;
-        if (currentEnd && currentEnd.cumulativeDistance < currentStart.cumulativeDistance) {
-            isReverse = true; // We are heading South (towards mile 0)
-        }
-
-        const startDist = currentStart.cumulativeDistance;
         const activeFilters = new Set(Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value));
         
-        // 2. Filter features based on direction
-        const features = testCorridor.features.filter(f => {
-            if (!activeFilters.has(f.type)) return false;
+        // --- THE NEW GRAPH SEARCH ALGORITHM ---
+        let foundFeatures = [];
+        let visited = new Set(); // Keeps track of where we've been so we don't go in circles
+        
+        // We start exactly where the boat is, having traveled 0 miles
+        let queue = [{ feature: currentStart, dist: 0 }];
+        
+        while (queue.length > 0) {
+            let current = queue.shift();
             
-            if (isReverse) {
-                // Looking backwards: Feature must be less than start, but greater than our max travel distance
-                return f.cumulativeDistance < startDist && f.cumulativeDistance >= (startDist - travelDist);
-            } else {
-                // Looking forwards: Feature must be greater than start, but less than our max travel distance
-                return f.cumulativeDistance > startDist && f.cumulativeDistance <= (startDist + travelDist);
+            // If we've already checked this exact spot, skip it
+            if (visited.has(current.feature.id)) continue;
+            visited.add(current.feature.id);
+            
+            // If it's within range, matches filters, and isn't our starting point, save it!
+            if (current.dist > 0 && current.dist <= travelDist) {
+                if (activeFilters.has(current.feature.type)) {
+                    // We save it with the exact distance it took to get here
+                    foundFeatures.push({ ...current.feature, calculatedDistance: current.dist });
+                }
             }
-        }).sort((a, b) => {
-            // 3. Sort so the closest features always appear first in the list!
-            return isReverse 
-                ? b.cumulativeDistance - a.cumulativeDistance 
-                : a.cumulativeDistance - b.cumulativeDistance;
-        });
+            
+            // Look down the canal: check all connected neighbors!
+            if (current.dist < travelDist && current.feature.connections) {
+                current.feature.connections.forEach(conn => {
+                    let neighbor = testCorridor.features.find(f => f.id === conn.targetId);
+                    if (neighbor && !visited.has(neighbor.id)) {
+                        // Add the neighbor to our queue, adding its distance to our total trip so far
+                        queue.push({ feature: neighbor, dist: current.dist + conn.distance });
+                    }
+                });
+            }
+        }
 
+        // Sort the features so the closest ones always appear first
+        foundFeatures.sort((a, b) => a.calculatedDistance - b.calculatedDistance);
+
+        // --- UPDATE THE UI ---
         const resultDiv = document.getElementById('results');
-        if (features.length === 0) { resultDiv.innerHTML = '<div class="empty-state">No features found</div>'; return; }
+        if (foundFeatures.length === 0) { resultDiv.innerHTML = '<div class="empty-state">No features found</div>'; return; }
 
         let html = `<div class="stats">
-            <div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">${features.length}</div></div>
-            <div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">${features.filter(f => f.type === 'lock').length}</div></div>
+            <div class="stat-box"><div class="stat-label">Ahead</div><div class="stat-value">${foundFeatures.length}</div></div>
+            <div class="stat-box"><div class="stat-label">Locks</div><div class="stat-value">${foundFeatures.filter(f => f.type === 'lock').length}</div></div>
         </div><div class="features-list">`;
 
         clearMarkers();
-        features.forEach(f => {
-            // 4. Calculate absolute distance and ETA so we don't get negative times
-            const distToFeature = Math.abs(f.cumulativeDistance - startDist);
-            const eta = distToFeature / speed;
-            
+        foundFeatures.forEach(f => {
+            const eta = f.calculatedDistance / speed;
             html += `<div class="feature-item" onclick="map.setView([${f.latitude},${f.longitude}],14)">
                 <span class="badge badge-${f.type}">${f.type.toUpperCase()}</span>
                 <strong>${f.name}</strong>
-<small>${distToFeature.toFixed(1)} mi away | ETA: ${Math.floor(eta)}h ${Math.round((eta % 1) * 60)}m</small>
+                <small>${f.calculatedDistance.toFixed(2)} mi away | ETA: ${Math.floor(eta)}h ${Math.round((eta % 1) * 60)}m</small>
             </div>`;
             const m = L.circleMarker([f.latitude, f.longitude], { radius: 6, fillColor: '#007BFF', color: 'white', weight: 1, fillOpacity: 0.8 }).bindPopup(f.name).addTo(map);
             markers.push(m);
         });
         resultDiv.innerHTML = html + '</div>';
-    }
-
-    function clearMarkers() {
+    }    function clearMarkers() {
         markers.forEach(m => map.removeLayer(m));
         markers = [];
         if (polyline) map.removeLayer(polyline);
