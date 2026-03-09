@@ -238,6 +238,7 @@
     </div>
 </div>
 
+<script src="engine.js"></script>
 <script src="testCorridor.js"></script>
 <script>
     let map;
@@ -386,7 +387,7 @@
             filtered.forEach(f => {
                 const item = document.createElement('div');
                 item.className = 'search-item';
-                item.textContent = `${f.name} (${f.cumulativeDistance.toFixed(1)} mi)`;
+                item.textContent = f.name;
                 item.onclick = () => selectFeature(f, type, inputId, badgeId);
                 resultsDiv.appendChild(item);
             });
@@ -397,7 +398,7 @@
     function selectFeature(feature, type, inputId, badgeId) {
         const badge = document.getElementById(badgeId);
         document.getElementById(inputId).value = feature.name;
-        badge.innerHTML = `✓ <strong>${feature.name}</strong><br>${feature.cumulativeDistance.toFixed(1)} mi`;
+        badge.innerHTML = `✓ <strong>${feature.name}</strong>`;
         badge.classList.add('show');
         document.getElementById(inputId.replace('Search', 'Results')).classList.remove('show');
         if (type === 'start') { currentStart = feature; addMarker('start'); } 
@@ -480,27 +481,30 @@
     }
 
     function updateRoute() {
-        if (!currentStart || !currentEnd) return;
-        if (routePolyline) map.removeLayer(routePolyline);
-        
-        const dist = Math.abs(currentEnd.cumulativeDistance - currentStart.cumulativeDistance);
-        const speed = parseFloat(document.getElementById('speed').value) || 3;
-        const time = dist / speed;
-        document.getElementById('routeDist').textContent = dist.toFixed(1);
-        document.getElementById('routeDur').textContent = `${Math.floor(time)}h ${Math.round((time % 1) * 60)}m`;
-        document.getElementById('routeInfo').style.display = 'block';
+    if (!currentStart || !currentEnd) return;
+    if (routePolyline) map.removeLayer(routePolyline);
+    
+    // --- 1. ASK THE NEW ENGINE FOR THE DISTANCE ---
+    const routeResult = calculateRoute(currentStart, currentEnd, testCorridor);
+    const dist = routeResult ? routeResult.totalDistance : 0;
+    
+    // --- 2. CALCULATE THE TIME ---
+    const speed = parseFloat(document.getElementById('speed').value) || 3;
+    const time = dist / speed;
+    
+    // --- 3. UPDATE THE TEXT ON THE SCREEN ---
+    document.getElementById('routeDist').textContent = dist.toFixed(2);
+    document.getElementById('routeDur').textContent = `${Math.floor(time)}h ${Math.round((time % 1) * 60)}m`;
+    document.getElementById('routeInfo').style.display = 'block';
 
-        const path = getCanalPathBetween(currentStart.latitude, currentStart.longitude, currentEnd.latitude, currentEnd.longitude);
-        
-        if (path) {
-            // --- YOUR OLD CODE (Safely hidden!) ---
-            // routePolyline = L.polyline(path, { color: '#28a745', weight: 4 }).addTo(map);
-
-            // --- THE NEW FIX ---
-            const pathSegments = splitOnJumps(path);
-            routePolyline = L.polyline(pathSegments, { color: '#28a745', weight: 4 }).addTo(map);
-        }
+    // --- 4. DRAW THE LINE ON THE MAP ---
+    const path = getCanalPathBetween(currentStart.latitude, currentStart.longitude, currentEnd.latitude, currentEnd.longitude);
+    
+    if (path) {
+        const pathSegments = splitOnJumps(path);
+        routePolyline = L.polyline(pathSegments, { color: '#28a745', weight: 4 }).addTo(map);
     }
+}
     function calculateLookahead() {
         if (!currentStart) return alert('Select a start point');
         const speed = parseFloat(document.getElementById('speed').value);
