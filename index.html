@@ -101,17 +101,17 @@
         }
 
         /* Mobile Phone Layout */
-        @media (max-width: 768px) {
-            .container { 
-                display: flex; 
-                flex-direction: column; 
-                gap: 15px;
-            }
-            .map-panel { order: -1; }
-            #map { height: 50vh; }
-            h1 { font-size: 22px; margin-bottom: 10px; }
-            body { padding: 10px; }
-        }
+@media (max-width: 768px) {
+    .container { display: flex; flex-direction: column; gap: 15px; }
+    .map-panel { order: -1; }
+    #map { height: 50vh; }
+    h1 { font-size: 22px; margin-bottom: 10px; }
+    body { padding: 10px; }
+
+    /* 👇 ADD THESE FOR TIDY BUTTONS 👇 */
+    .filter-checks { gap: 12px; } 
+    .filter-check-item { padding: 4px 0; width: 30%; } 
+}
     </style>    
 </head>
 <body>
