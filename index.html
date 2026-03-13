@@ -108,9 +108,18 @@
     h1 { font-size: 22px; margin-bottom: 10px; }
     body { padding: 10px; }
 
-    /* 👇 ADD THESE FOR TIDY BUTTONS 👇 */
-    .filter-checks { gap: 12px; } 
-    .filter-check-item { padding: 4px 0; width: 30%; } 
+     /* 👇 BULLETPROOF MOBILE GRID 👇 */
+    .filter-checks { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr 1fr; /* Forces exactly 3 equal columns */
+        gap: 8px; 
+        width: 100%;
+    } 
+    .filter-check-item { 
+        width: 100%; 
+        margin: 0; 
+        padding: 5px 0;
+    }
 }
     </style>    
 </head>
