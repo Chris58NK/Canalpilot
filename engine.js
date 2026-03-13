@@ -4,31 +4,28 @@
 let masterDatabase = [];
 let canalGraph = {};
 let map; 
-let currentRouteLayer = null; // Memory for the drawn red line
+let currentRouteLayer = null; 
+let startMarker = null;
+let endMarker = null;
+let routeMarkers = []; // Memory for the waypoint pins
 
 // --- 2. MAP SETUP ---
 function initMap() {
     console.log("🗺️ Initializing map...");
     const mapDiv = document.getElementById('map');
-    if (!mapDiv) {
-        console.error("❌ Could not find <div id='map'> in HTML!");
-        return;
-    }
+    if (!mapDiv) return;
     
     // Centers the map on the UK
     map = L.map('map').setView([52.5, -1.5], 7); 
-    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // Draw the beautiful blue canal network
     if (typeof networkData !== 'undefined') {
         L.geoJSON(networkData, {
             style: { color: '#007BFF', weight: 3, opacity: 0.8 }
         }).addTo(map);
-        console.log("🌊 Canal network drawn on map.");
     }
 }
 
@@ -43,14 +40,26 @@ function populateDropdowns() {
 
     const addToMaster = (data, type) => {
         if (typeof data !== 'undefined' && data.features) {
-            data.features.forEach(feature => { // Changed from 'f' to 'feature' to be totally safe!
-                const rawName = feature.properties.sap_description || feature.properties.name || `Unnamed ${type}`;
-                const displayName = `${rawName} (${type})`; 
-                masterDatabase.push({
-                    name: displayName,
-                    coords: feature.geometry.coordinates,
-                    type: type
-                });
+            data.features.forEach(feature => { 
+                // 1. Skip if there is missing geometry
+                if (!feature.geometry || !feature.geometry.coordinates) return;
+
+                // 2. Drill down to find the exact numbers (fixes Marinas/Polygons)
+                let coords = feature.geometry.coordinates;
+                while (Array.isArray(coords[0])) {
+                    coords = coords[0];
+                }
+
+                // 3. Only save it to the brain if we successfully found actual numbers
+                if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+                    const rawName = feature.properties.sap_description || feature.properties.name || `Unnamed ${type}`;
+                    const displayName = `${rawName} (${type})`; 
+                    masterDatabase.push({
+                        name: displayName,
+                        coords: [coords[0], coords[1]], // Lock in exactly [lon, lat]
+                        type: type
+                    });
+                }
             });
         }
     };
@@ -70,8 +79,8 @@ function populateDropdowns() {
         option.value = item.name;
         list.appendChild(option);
     });
-    console.log(`✅ Loaded ${masterDatabase.length} total waypoints.`);
-}
+    console.log(`✅ Loaded ${masterDatabase.length} valid waypoints.`);
+} 
 
 // --- 4. BUILD THE NAVIGATION GRAPH ---
 function buildGraph() {
@@ -98,7 +107,6 @@ function buildGraph() {
             }
         }
     });
-    console.log(`✅ Network online! Mapped ${Object.keys(canalGraph).length} navigation points.`);
 }
 
 // --- 5. FIND CLOSEST CANAL POINT ---
@@ -118,7 +126,7 @@ function findClosestNode(targetCoords) {
     return closestId;
 }
 
-// --- 6. CALCULATE ROUTE & DRAW RED LINE ---
+// --- 6. CALCULATE ROUTE ---
 function calculateRoute() {
     const startVal = document.getElementById('startNode').value;
     const endVal = document.getElementById('endNode').value;
@@ -128,7 +136,7 @@ function calculateRoute() {
     const endPoint = masterDatabase.find(item => item.name === endVal);
 
     if (!startPoint || !endPoint) {
-        resultDisplay.innerHTML = "<span style='color:#d97706;'>⚠️ Please select valid points from the dropdown.</span>";
+        resultDisplay.innerHTML = "<span style='color:#d97706;'>⚠️ Please select valid points.</span>";
         return;
     }
 
@@ -139,7 +147,7 @@ function calculateRoute() {
         const endNodeId = findClosestNode(endPoint.coords);
 
         const distances = {};
-        const previousNodes = {}; // The breadcrumb trail
+        const previousNodes = {}; 
         let activeNodes = new Map();
         
         for (let node in canalGraph) {
@@ -168,7 +176,7 @@ function calculateRoute() {
                 let alt = distances[currNode] + canalGraph[currNode][neighbor];
                 if (alt < distances[neighbor]) {
                     distances[neighbor] = alt;
-                    previousNodes[neighbor] = currNode; // Drop a breadcrumb
+                    previousNodes[neighbor] = currNode; 
                     activeNodes.set(neighbor, alt);
                 }
             }
@@ -177,9 +185,8 @@ function calculateRoute() {
         const totalMiles = distances[endNodeId];
 
         if (totalMiles === Infinity) {
-            resultDisplay.innerHTML = `<span style='color:red;'>❌ No connected water route found between these points.</span>`;
+            resultDisplay.innerHTML = `<span style='color:red;'>❌ No connected water route found.</span>`;
         } else {
-            // --- DRAW THE ROUTE ---
             let pathCoords = [];
             let step = endNodeId;
             while (step) {
@@ -188,9 +195,10 @@ function calculateRoute() {
                 step = previousNodes[step];
             }
 
-            if (currentRouteLayer) {
-                map.removeLayer(currentRouteLayer); // Erase old route
-            }
+            // Draw Route
+            if (currentRouteLayer) map.removeLayer(currentRouteLayer);
+            if (startMarker) map.removeLayer(startMarker);
+            if (endMarker) map.removeLayer(endMarker);
 
             currentRouteLayer = L.polyline(pathCoords, {
                 color: '#ff2a00',
@@ -199,7 +207,16 @@ function calculateRoute() {
                 lineCap: 'round'
             }).addTo(map);
 
-            map.fitBounds(currentRouteLayer.getBounds(), { padding: [40, 40] }); // Auto-zoom
+            startMarker = L.marker([startPoint.coords[1], startPoint.coords[0]])
+                .addTo(map).bindPopup(`<b>🟢 Start:</b> ${startPoint.name}`);
+
+            endMarker = L.marker([endPoint.coords[1], endPoint.coords[0]])
+                .addTo(map).bindPopup(`<b>🔴 End:</b> ${endPoint.name}`);
+
+            map.fitBounds(currentRouteLayer.getBounds(), { padding: [40, 40] }); 
+
+            // --- CALL THE SCANNER ---
+            scanWaypoints(pathCoords);
 
             const speed = parseFloat(document.getElementById('speed').value) || 3;
             resultDisplay.innerHTML = `
@@ -212,7 +229,71 @@ function calculateRoute() {
     }, 50); 
 }
 
-// --- 7. START ENGINE ON LOAD ---
+// --- 7. THE WAYPOINT SCANNER ---
+window.setAllFilters = function(state) {
+    document.querySelectorAll('.wp-filter').forEach(cb => cb.checked = state);
+};
+
+function scanWaypoints(pathCoords) {
+    console.log("🔍 Scanning for waypoints along the route...");
+
+    routeMarkers.forEach(marker => map.removeLayer(marker));
+    routeMarkers = [];
+
+    const activeFilters = Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value);
+    if (activeFilters.length === 0 || pathCoords.length < 2) return; 
+
+    const typeMapping = {
+        'lock': ['Lock'],
+        'bridge': ['Bridge'],
+        'winding': ['Winding Hole'],
+        'marina': ['Wharf/Marina'],
+        'wharf': ['Wharf/Marina'],
+        'aqueduct': ['Aqueduct'],
+        'tunnel': ['Tunnel', 'Tunnel Portal']
+    };
+
+    let allowedTypes = [];
+    activeFilters.forEach(filter => {
+        if (typeMapping[filter]) allowedTypes.push(...typeMapping[filter]);
+    });
+
+    const turfLine = turf.lineString(pathCoords.map(c => [c[1], c[0]]));
+
+    masterDatabase.forEach(item => {
+        if (allowedTypes.includes(item.type)) {
+            const pt = turf.point(item.coords); 
+            // 0.05 miles is an 80-meter tube around your red line
+            const dist = turf.pointToLineDistance(pt, turfLine, {units: 'miles'});
+            if (dist < 0.05) {
+                const marker = L.circleMarker([item.coords[1], item.coords[0]], {
+                    radius: 6,
+                    fillColor: getMarkerColor(item.type),
+                    color: "#ffffff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 1
+                }).bindPopup(`<b>${item.name}</b>`);
+                
+                marker.addTo(map);
+                routeMarkers.push(marker);
+            }
+        }
+    });
+    console.log(`✅ Dropped ${routeMarkers.length} waypoint pins.`);
+}
+
+function getMarkerColor(type) {
+    if (type === 'Lock') return '#ff6b6b';
+    if (type === 'Bridge') return '#4ecdc4';
+    if (type === 'Winding Hole') return '#e74c3c';
+    if (type === 'Wharf/Marina') return '#45b7d1';
+    if (type === 'Aqueduct') return '#f39c12';
+    if (type === 'Tunnel' || type === 'Tunnel Portal') return '#95a5a6';
+    return '#3498db'; 
+}
+
+// --- 8. START ENGINE ON LOAD ---
 window.onload = function() {
     console.log("🏁 Window loaded, starting engine...");
     initMap();
