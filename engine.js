@@ -7,7 +7,7 @@ let map;
 let currentRouteLayer = null; 
 let startMarker = null;
 let endMarker = null;
-let routeMarkers = []; // Memory for the waypoint pins
+let routeMarkers = []; 
 
 // --- 2. MAP SETUP ---
 function initMap() {
@@ -15,7 +15,6 @@ function initMap() {
     const mapDiv = document.getElementById('map');
     if (!mapDiv) return;
     
-    // Centers the map on the UK
     map = L.map('map').setView([52.5, -1.5], 7); 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -41,22 +40,19 @@ function populateDropdowns() {
     const addToMaster = (data, type) => {
         if (typeof data !== 'undefined' && data.features) {
             data.features.forEach(feature => { 
-                // 1. Skip if there is missing geometry
                 if (!feature.geometry || !feature.geometry.coordinates) return;
 
-                // 2. Drill down to find the exact numbers (fixes Marinas/Polygons)
                 let coords = feature.geometry.coordinates;
                 while (Array.isArray(coords[0])) {
                     coords = coords[0];
                 }
 
-                // 3. Only save it to the brain if we successfully found actual numbers
                 if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
                     const rawName = feature.properties.sap_description || feature.properties.name || `Unnamed ${type}`;
                     const displayName = `${rawName} (${type})`; 
                     masterDatabase.push({
                         name: displayName,
-                        coords: [coords[0], coords[1]], // Lock in exactly [lon, lat]
+                        coords: [coords[0], coords[1]],
                         type: type
                     });
                 }
@@ -79,8 +75,7 @@ function populateDropdowns() {
         option.value = item.name;
         list.appendChild(option);
     });
-    console.log(`✅ Loaded ${masterDatabase.length} valid waypoints.`);
-} 
+}
 
 // --- 4. BUILD THE NAVIGATION GRAPH ---
 function buildGraph() {
@@ -194,6 +189,9 @@ function calculateRoute() {
                 pathCoords.push([lat, lon]); 
                 step = previousNodes[step];
             }
+            
+            // Reverse the path so it goes Start -> End!
+            pathCoords.reverse();
 
             // Draw Route
             if (currentRouteLayer) map.removeLayer(currentRouteLayer);
@@ -215,33 +213,39 @@ function calculateRoute() {
 
             map.fitBounds(currentRouteLayer.getBounds(), { padding: [40, 40] }); 
 
-            // --- CALL THE SCANNER ---
-            scanWaypoints(pathCoords);
-
+            // Get the speed for calculations
             const speed = parseFloat(document.getElementById('speed').value) || 3;
+            
+            // Generate the Itinerary HTML from the scanner
+            const itineraryHTML = scanWaypoints(pathCoords, speed);
+
+            // Print the Green Summary Box + The Itinerary List
             resultDisplay.innerHTML = `
-                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745;">
+                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-bottom: 15px;">
                     <strong>🗺️ Route Mapped Successfully!</strong><br><br>
                     Distance: <b>${totalMiles.toFixed(2)} miles</b><br>
                     Est. Travel Time (${speed}mph): <b>${(totalMiles / speed).toFixed(1)} hours</b>
-                </div>`;
+                </div>
+                ${itineraryHTML}
+            `;
         }
     }, 50); 
 }
 
-// --- 7. THE WAYPOINT SCANNER ---
+// --- 7. THE WAYPOINT SCANNER & ITINERARY ---
 window.setAllFilters = function(state) {
     document.querySelectorAll('.wp-filter').forEach(cb => cb.checked = state);
 };
 
-function scanWaypoints(pathCoords) {
-    console.log("🔍 Scanning for waypoints along the route...");
+function scanWaypoints(pathCoords, speed) {
+    console.log("🔍 Scanning and building itinerary...");
 
     routeMarkers.forEach(marker => map.removeLayer(marker));
     routeMarkers = [];
+    let itinerary = []; // Memory for our printed list
 
     const activeFilters = Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value);
-    if (activeFilters.length === 0 || pathCoords.length < 2) return; 
+    if (activeFilters.length === 0 || pathCoords.length < 2) return ""; 
 
     const typeMapping = {
         'lock': ['Lock'],
@@ -250,7 +254,8 @@ function scanWaypoints(pathCoords) {
         'marina': ['Wharf/Marina'],
         'wharf': ['Wharf/Marina'],
         'aqueduct': ['Aqueduct'],
-        'tunnel': ['Tunnel', 'Tunnel Portal']
+        'tunnel': ['Tunnel', 'Tunnel Portal'],
+        'junction': ['Junction']
     };
 
     let allowedTypes = [];
@@ -259,28 +264,65 @@ function scanWaypoints(pathCoords) {
     });
 
     const turfLine = turf.lineString(pathCoords.map(c => [c[1], c[0]]));
+    const startPoint = turf.point([pathCoords[0][1], pathCoords[0][0]]);
 
     masterDatabase.forEach(item => {
         if (allowedTypes.includes(item.type)) {
             const pt = turf.point(item.coords); 
-            // 0.05 miles is an 80-meter tube around your red line
-            const dist = turf.pointToLineDistance(pt, turfLine, {units: 'miles'});
-            if (dist < 0.05) {
+            const distToLine = turf.pointToLineDistance(pt, turfLine, {units: 'miles'});
+            
+            if (distToLine < 0.05) {
+                const markerColor = getMarkerColor(item.type);
                 const marker = L.circleMarker([item.coords[1], item.coords[0]], {
-                    radius: 6,
-                    fillColor: getMarkerColor(item.type),
-                    color: "#ffffff",
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 1
+                    radius: 6, fillColor: markerColor, color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 1
                 }).bindPopup(`<b>${item.name}</b>`);
-                
                 marker.addTo(map);
                 routeMarkers.push(marker);
+
+                // --- NEW: ITINERARY MATH ---
+                const snapped = turf.nearestPointOnLine(turfLine, pt);
+                const sliced = turf.lineSlice(startPoint, snapped, turfLine);
+                const milesAlongRoute = turf.length(sliced, {units: 'miles'});
+
+                itinerary.push({
+                    name: item.name,
+                    type: item.type,
+                    distance: milesAlongRoute,
+                    color: markerColor
+                });
             }
         }
     });
+
     console.log(`✅ Dropped ${routeMarkers.length} waypoint pins.`);
+
+    // Sort the itinerary by distance from start
+    itinerary.sort((a, b) => a.distance - b.distance);
+
+    // Build the HTML list
+    let html = `<div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">`;
+    
+    itinerary.forEach(step => {
+        const hours = step.distance / speed;
+        const h = Math.floor(hours);
+        const m = Math.round((hours - h) * 60);
+        const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
+
+        html += `
+        <div style="background: rgba(255,255,255,0.8); margin-bottom: 8px; padding: 10px; border-radius: 6px; border-left: 4px solid ${step.color}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 13px;">
+                <span class="badge" style="background-color: ${step.color};">${step.type.toUpperCase()}</span><br>
+                <b style="color: #333;">${step.name}</b>
+            </div>
+            <div style="text-align: right; font-size: 12px; color: #555;">
+                <b>${step.distance.toFixed(2)} mi</b><br>
+                ⏱️ ${timeString}
+            </div>
+        </div>`;
+    });
+    
+    html += `</div>`;
+    return html;
 }
 
 function getMarkerColor(type) {
