@@ -101,17 +101,34 @@
         }
 
         /* Mobile Phone Layout */
-   /* 👇 THE BULLETPROOF CHECKBOX GRID 👇 */
-    .filter-checks { 
-        display: flex !important; 
-        flex-wrap: wrap !important; 
-        justify-content: space-between !important;
-        gap: 8px !important; 
-    } 
-    .filter-check-item { 
-        flex: 1 1 30% !important; /* Forces 3 columns */
-        min-width: 90px !important; /* Stops them from crushing together */
-        margin: 0 !important; 
+   /*  /* Mobile Phone Layout */
+    @media (max-width: 768px) {
+        /* Force the 3 main panels to stack vertically */
+        .container { 
+            display: flex !important; 
+            flex-direction: column !important; 
+            gap: 15px !important; 
+        }
+        
+        /* Put the map at the very top */
+        .map-panel { order: -1 !important; }
+        #map { height: 50vh !important; }
+        
+        h1 { font-size: 22px !important; margin-bottom: 10px !important; }
+        body { padding: 10px !important; }
+        
+        /* Force the checkboxes into a tidy grid */
+        .filter-checks { 
+            display: flex !important; 
+            flex-wrap: wrap !important; 
+            justify-content: space-between !important;
+            gap: 8px !important; 
+        } 
+        .filter-check-item { 
+            flex: 1 1 30% !important; 
+            min-width: 90px !important; 
+            margin: 0 !important; 
+        } 
     }
     </style>    
 </head>
