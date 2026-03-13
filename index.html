@@ -101,26 +101,18 @@
         }
 
         /* Mobile Phone Layout */
-@media (max-width: 768px) {
-    .container { display: flex; flex-direction: column; gap: 15px; }
-    .map-panel { order: -1; }
-    #map { height: 50vh; }
-    h1 { font-size: 22px; margin-bottom: 10px; }
-    body { padding: 10px; }
-
-     /* 👇 BULLETPROOF MOBILE GRID 👇 */
+   /* 👇 THE BULLETPROOF CHECKBOX GRID 👇 */
     .filter-checks { 
-        display: grid; 
-        grid-template-columns: 1fr 1fr 1fr; /* Forces exactly 3 equal columns */
-        gap: 8px; 
-        width: 100%;
+        display: flex !important; 
+        flex-wrap: wrap !important; 
+        justify-content: space-between !important;
+        gap: 8px !important; 
     } 
     .filter-check-item { 
-        width: 100%; 
-        margin: 0; 
-        padding: 5px 0;
+        flex: 1 1 30% !important; /* Forces 3 columns */
+        min-width: 90px !important; /* Stops them from crushing together */
+        margin: 0 !important; 
     }
-}
     </style>    
 </head>
 <body>
