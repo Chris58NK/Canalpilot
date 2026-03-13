@@ -2,213 +2,285 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚢 CanalPilot - Route Calculator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CanalPilot - Route Calculator</title>
+    
     <link rel="manifest" href="manifest.json">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"> </script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #74ebd5, #acb6e5);
-            padding: 20px;
-            min-height: 100vh;
+        /* --- 1. BASE RESET (Anti-Floppy Rules) --- */
+        * {
+            box-sizing: border-box !important;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            overflow-x: hidden !important; /* Kills horizontal wobble completely */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+            color: #333;
+            height: 100vh;
         }
 
-        /* Glassmorphism Panel Integration */
-        .glass-panel, .panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 20px;
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-            margin-bottom: 20px;
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin: 15px 0;
+            font-size: 28px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
         }
 
+        /* --- 2. DESKTOP LAYOUT (3 Columns) --- */
         .container {
-            max-width: 1600px;
-            margin: 0 auto;
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 20px;
+            padding: 0 20px 20px 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            height: calc(100vh - 70px);
         }
 
-        h1 { grid-column: 1/-1; text-align: center; color: white; font-size: 28px; margin-bottom: 20px; }
-        h2 { color: #333; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #007BFF; padding-bottom: 10px; }
+        .panel {
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
 
-        .input-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 13px; }
+        .map-panel {
+            padding: 0;
+            overflow: hidden;
+        }
 
-        input, select, .search-box {
+        #map {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px !important;
-            font-size: 14px;
+            height: 100%;
+            border-radius: 12px;
         }
 
-        .search-box:focus { outline: none; border-color: #007BFF; }
-
-        .button-group { display: flex; gap: 10px; margin: 20px 0; }
-        button {
-            flex: 1;
-            padding: 10px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        button:hover { background-color: #0056b3; }
-
-        #map { height: 600px; border-radius: 8px; width: 100%; }
-        .map-panel { padding: 0; overflow: hidden; }
-
-        .badge { display: inline-block; padding: 2px 6px; border-radius: 10px; color: white; font-size: 10px; font-weight: bold; margin-right: 5px; }
-        .badge-lock { background: #ff6b6b; }
-        .badge-bridge { background: #4ecdc4; }
-        .badge-marina { background: #45b7d1; }
-        .badge-wharf { background: #96ceb4; }
-        .badge-water { background: #3498db; }
-        .badge-tunnel { background: #95a5a6; }
-        .badge-junction { background: #667eea; }
-        .badge-winding { background: #e74c3c; }
-        .badge-aqueduct { background: #f39c12; }
-
-        .filter-checks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
-        .filter-check-item { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; }
-        .filter-links { font-size: 11px; margin-top: 5px; }
-        .filter-links a { color: #007BFF; cursor: pointer; text-decoration: underline; }
-
-        .empty-state { text-align: center; padding: 30px 10px; color: #999; }
-        
-        #routeResult {
-            margin-top: 15px;
-            font-size: 14px;
+        /* --- 3. TYPOGRAPHY & FORMS --- */
+        h3 {
+            margin-top: 0;
+            border-bottom: 2px solid #007BFF;
+            padding-bottom: 8px;
             color: #2c3e50;
         }
 
-        @media (max-width: 1200px) {
-            .container { grid-template-columns: 1fr 1fr; }
-            .map-panel { grid-column: 1/-1; }
+        label {
+            font-weight: bold;
+            font-size: 13px;
+            color: #444;
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 4px;
         }
 
-        /* Mobile Phone Layout */
-   /*  /* Mobile Phone Layout */
-        @media (max-width: 900px) {
-        /* Force the 3 main panels to stack vertically */
-        .container { 
-            display: flex !important; 
-            flex-direction: column !important; 
-            gap: 15px !important; 
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 5px;
         }
-        
-        /* Put the map at the very top */
-        .map-panel { order: -1 !important; }
-        #map { height: 50vh !important; }
-        
-        h1 { font-size: 22px !important; margin-bottom: 10px !important; }
-        body { padding: 10px !important; }
-        
-        /* Force the checkboxes into a tidy grid */
-        .filter-checks { 
-            display: flex !important; 
-            flex-wrap: wrap !important; 
-            justify-content: space-between !important;
-            gap: 8px !important; 
-        } 
-        .filter-check-item { 
-            flex: 1 1 30% !important; 
-            min-width: 90px !important; 
-            margin: 0 !important; 
-        } 
-    }
-    </style>    
+
+        /* --- 4. BADGES --- */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+        }
+        .b-lock { background: #ff6b6b; }
+        .b-bridge { background: #4ecdc4; }
+        .b-winding { background: #e74c3c; }
+        .b-marina { background: #45b7d1; }
+        .b-aqueduct { background: #f39c12; }
+        .b-wharf { background: #a2d9ce; }
+        .b-water { background: #3498db; }
+        .b-tunnel { background: #95a5a6; }
+        .b-junction { background: #738adc; }
+
+        /* --- 5. BUTTONS & DESKTOP CHECKBOXES --- */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-calc { background: #007BFF; }
+        .btn-calc:hover { background: #0056b3; }
+        .btn-reset { background: #007BFF; }
+        .btn-reset:hover { background: #0056b3; }
+
+        .filter-checks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .filter-check-item {
+            display: flex;
+            align-items: center;
+            width: 30%;
+            min-width: 90px;
+        }
+
+        .filter-check-item input {
+            margin-right: 5px;
+        }
+
+        .select-links {
+            font-size: 12px;
+            margin-top: 8px;
+            display: block;
+        }
+
+        .select-links a {
+            color: #007BFF;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* --- 6. MOBILE LAYOUT SLEDGEHAMMER (Under 768px) --- */
+        @media (max-width: 768px) {
+            body { padding: 10px !important; height: auto !important; }
+            h1 { font-size: 22px !important; margin-bottom: 10px !important; }
+            
+            .container { 
+                display: flex !important; 
+                flex-direction: column !important; 
+                gap: 15px !important; 
+                padding: 0 !important;
+                height: auto !important;
+            }
+            
+            /* Map at the top for mobile */
+            .map-panel { order: -1 !important; }
+            #map { height: 50vh !important; }
+            
+            /* Titanium Checkbox Grid for iPhone Safari */
+            .filter-checks {
+                display: grid !important;
+                grid-template-columns: 50% 50% !important; 
+                row-gap: 15px !important;
+                column-gap: 0px !important;
+                padding: 10px 0 !important;
+                width: 100% !important;
+            }
+
+            .filter-check-item {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                width: 100% !important;
+                margin: 0 !important;
+            }
+
+            .filter-check-item input[type="checkbox"] {
+                width: 20px !important;
+                height: 20px !important;
+                margin: 0 10px 0 0 !important; 
+                flex-shrink: 0 !important; /* Stops iOS from squishing the box */
+            }
+        }
+    </style>
 </head>
 <body>
 
-<h1>🚢 CanalPilot - Route Calculator</h1>
+    <h1>🚢 CanalPilot - Route Calculator</h1>
 
-<div class="container">
-    <div class="panel">
-        <h2>Route Setup</h2>
-        
-        <div class="input-group">
+    <div class="container">
+        <div class="panel">
+            <h3>Route Setup</h3>
+            
             <label>Start Point:</label>
-            <input type="text" id="startNode" list="lockList" class="search-box" placeholder="Select Start Lock...">
-        </div>
-
-        <div class="input-group">
+            <input type="text" id="startNode" list="lockList" placeholder="Select Start Location...">
+            
             <label>End Point:</label>
-            <input type="text" id="endNode" list="lockList" class="search-box" placeholder="Select End Lock...">
-        </div>
+            <input type="text" id="endNode" list="lockList" placeholder="Select End Location...">
+            
+            <datalist id="lockList"></datalist>
 
-        <datalist id="lockList"></datalist>
-
-        <h2>Settings</h2>
-        <div class="input-group">
+            <h3 style="margin-top: 20px;">Settings</h3>
+            
             <label>Speed (mph):</label>
-            <input type="number" id="speed" value="3" min="0.5" max="10" step="0.5">
-        </div>
-
-        <div class="input-group">
+            <input type="number" id="speed" value="3" step="0.5">
+            
             <label>Lookahead (hours):</label>
-            <input type="number" id="lookahead" value="2" min="0.5" max="24" step="0.5">
-        </div>
+            <input type="number" id="lookahead" value="5" step="1">
 
-        <div class="input-group">
             <label>Filter Waypoints:</label>
             <div class="filter-checks">
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="lock" checked> <span class="badge badge-lock">LOCK</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="bridge" checked> <span class="badge badge-bridge">BRIDGE</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="winding" checked> <span class="badge badge-winding">WINDING</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="marina" checked> <span class="badge badge-marina">MARINA</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="aqueduct" checked> <span class="badge badge-aqueduct">AQUEDUCT</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="wharf" checked> <span class="badge badge-wharf">WHARF</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="water" checked> <span class="badge badge-water">WATER</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="tunnel" checked> <span class="badge badge-tunnel">TUNNEL</span></label>
-                <label class="filter-check-item"><input type="checkbox" class="wp-filter" value="junction" checked> <span class="badge badge-junction">JUNCTION</span></label>
+                <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="lock" checked> <span class="badge b-lock">LOCK</span></div>
+                <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="bridge" checked> <span class="badge b-bridge">BRIDGE</span></div>
+                <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="winding" checked> <span class="badge b-winding">WINDING</span></div>
+                <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="marina" checked> <span class="badge b-marina">MARINA</span></div>
+                <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="aqueduct" checked> <span class="badge b-aqueduct">AQUEDUCT</span></div>
+                <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="wharf" checked> <span class="badge b-wharf">WHARF</span></div>
+                <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="water" checked> <span class="badge b-water">WATER</span></div>
+                <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="tunnel" checked> <span class="badge b-tunnel">TUNNEL</span></div>
+                <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="junction" checked> <span class="badge b-junction">JUNCTION</span></div>
             </div>
-            <div class="filter-links">
+            <div class="select-links">
                 <a onclick="setAllFilters(true)">Select all</a> | <a onclick="setAllFilters(false)">Select none</a>
             </div>
+
+            <div class="button-group">
+                <button class="btn-calc" onclick="calculateRoute()">Calculate Distance</button>
+                <button class="btn-reset" onclick="location.reload()">Reset</button>
+            </div>
         </div>
 
-        <div class="button-group">
-            <button onclick="calculateRoute()">Calculate Distance</button>
-            <button onclick="document.getElementById('startNode').value=''; document.getElementById('endNode').value=''; document.getElementById('routeResult').innerHTML='Select start point and click Calculate';">Reset</button>
+        <div class="panel">
+            <h3>Upcoming Features / Results</h3>
+            <div id="routeResult" style="margin-top:10px; font-size:15px; text-align:center;">
+                <br><br>Select start point and<br>click Calculate
+            </div>
+        </div>
+
+        <div class="panel map-panel">
+            <div id="map"></div>
         </div>
     </div>
 
-    <div class="panel">
-        <h2>Upcoming Features / Results</h2>
-        <div id="routeResult" class="empty-state">
-            Select start point and click Calculate
-        </div>
-    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <div class="panel map-panel">
-        <div id="map"></div>
-    </div>
- 
-</div> 
+    <script src="network.js"></script>
+    <script src="locks.js"></script>
+    <script src="bridges.js"></script>
+    <script src="tunnels.js"></script>
+    <script src="winding.js"></script>
+    <script src="aqueducts.js"></script>
+    <script src="wharves.js"></script>
+    <script src="tunnelPortals.js"></script>
+    <script src="facilities.js"></script>
 
-<script src="locks.js"></script>
-<script src="bridges.js"></script>
-<script src="tunnels.js"></script>
-<script src="winding_holes.js"></script>
-<script src="aqueducts.js"></script>
-<script src="wharves.js"></script> 
-<script src="network.js"></script>
-<script src="engine.js"></script>
-
+    <script src="engine.js"></script>
 </body>
 </html>
