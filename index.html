@@ -3,122 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CanalPilot | Navigation Dashboard</title>
-    
+    <title>CanalPilot Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
     <style>
-        /* 1. THE THEME */
-        body, html {
-            margin: 0; padding: 0; height: 100vh;
-            font-family: 'Segoe UI', sans-serif;
-            background: #1D4433; /* Deep Green */
-            color: white;
-            display: flex; flex-direction: column;
-        }
-
-        header {
-            padding: 15px; text-align: center;
-            border-bottom: 2px solid #6FAF6F;
-            background: rgba(0,0,0,0.2);
-        }
-
-        /* 2. THE SIDEBAR & MAP LAYOUT */
-        .main-container {
-            display: flex; /* This creates the Sidebar/Map split */
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .sidebar {
-            width: 380px; /* Fixed width for your inputs */
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            overflow-y: auto;
-            border-right: 1px solid #6FAF6F;
-            display: flex; flex-direction: column; gap: 20px;
-        }
-
-        #map {
-            flex: 1; /* Takes up all remaining space */
-            background: #ccc;
-        }
-
-        /* 3. DASHBOARD PANELS */
-        .panel {
-            background: white; color: #333;
-            padding: 15px; border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            border-left: 6px solid #6FAF6F;
-        }
-
-        h3 { margin: 0 0 10px 0; color: #1D4433; font-size: 18px; }
-        label { font-size: 12px; font-weight: bold; color: #666; display: block; margin-top: 10px; }
+        body, html { margin: 0; padding: 0; height: 100vh; font-family: 'Segoe UI', sans-serif; background: #1D4433; color: white; display: flex; flex-direction: column; }
+        header { padding: 15px; text-align: center; border-bottom: 2px solid #6FAF6F; background: rgba(0,0,0,0.2); }
+        .main-container { display: flex; flex: 1; overflow: hidden; padding: 20px; gap: 20px; }
         
-        input {
-            width: 100%; padding: 12px; margin-top: 5px;
-            border: 1px solid #ddd; border-radius: 6px;
-        }
+        /* 3-Column Layout */
+        .column { display: flex; flex-direction: column; gap: 20px; }
+        .side-col { width: 350px; }
+        .map-col { flex: 1; min-width: 400px; }
 
-        button {
-            width: 100%; padding: 15px; margin-top: 15px;
-            background: #1D4433; color: white;
-            border: none; border-radius: 6px;
-            font-weight: bold; cursor: pointer;
-            transition: 0.3s;
-        }
-        button:hover { background: #6FAF6F; }
-
-        /* SCROLLBAR STYLE */
-        .sidebar::-webkit-scrollbar { width: 6px; }
-        .sidebar::-webkit-scrollbar-thumb { background: #6FAF6F; border-radius: 10px; }
+        .panel { background: white; color: #333; padding: 15px; border-radius: 10px; border-left: 6px solid #6FAF6F; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        h3 { margin: 0 0 10px 0; color: #1D4433; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        input, select { width: 100%; padding: 10px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; margin-top: 15px; background: #1D4433; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        
+        #map { height: 100%; width: 100%; border-radius: 10px; background: #222; }
+        #mooring-panel, #itinerary-panel { overflow-y: auto; max-height: 400px; }
     </style>
 </head>
 <body>
-
-    <header>
-        <h1 style="margin:0;">CanalPilot</h1>
-    </header>
-
+    <header><h1>CanalPilot Navigation</h1></header>
     <div class="main-container">
-        <div class="sidebar">
-            
+        <div class="column side-col">
             <div class="panel">
-                <h3>Route Planner</h3>
-                <label>START POINT</label>
+                <h3>Planner</h3>
+                <label style="font-size: 12px; color: #666;">START POINT</label>
                 <input type="text" id="startNode" list="lockList" placeholder="Search locks/bridges...">
-                
-                <label>DESTINATION</label>
+                <label style="font-size: 12px; color: #666; margin-top: 10px; display: block;">DESTINATION</label>
                 <input type="text" id="endNode" list="lockList" placeholder="Search destination...">
-                
                 <datalist id="lockList"></datalist>
-                
-                <label>AVG SPEED (MPH)</label>
-                <input type="number" id="speed" value="3" step="0.5">
-                
                 <button onclick="calculateRoute()">Calculate Route</button>
             </div>
-
-            <div id="itinerary-panel">
-                </div>
-
-            <div id="mooring-panel">
-                </div>
-
+            <div id="itinerary-panel" class="panel">
+                <h3>Itinerary</h3>
+                <div id="itinerary-content">Route results will appear here.</div>
+            </div>
         </div>
 
-        <div id="map"></div>
+        <div class="column side-col">
+            <div id="mooring-panel" class="panel">
+                <h3>Live Mooring Status</h3>
+                <div id="mooring-content">Loading status...</div>
+            </div>
+        </div>
+
+        <div class="column map-col">
+            <div id="map"></div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-    
+
     <script src="network.js"></script>
     <script src="locks.js"></script>
     <script src="bridges.js"></script>
-    
-    <script src="engine.js"></script>
+    <script src="tunnels.js"></script>
+    <script src="facilities.js"></script>
 
+    <script src="engine.js"></script>
 </body>
 </html>
