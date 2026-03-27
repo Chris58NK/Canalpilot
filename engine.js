@@ -200,8 +200,8 @@ function calculateRoute() {
             if (startMarker) map.removeLayer(startMarker);
             if (endMarker) map.removeLayer(endMarker);
 
-            currentRouteLayer = L.polyline(pathCoords, {
-                color: '#ff2a00',
+           currentRouteLayer = L.polyline(pathCoords, {
+                color: '#22c55e',
                 weight: 6,
                 opacity: 0.9,
                 lineCap: 'round'
