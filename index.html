@@ -20,11 +20,9 @@
             width: 100%;
             overflow-x: hidden !important; /* Kills horizontal wobble completely */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
-            color: #333;
-            height: 100vh;
-        }
-
+           background: linear-gradient(135deg, #1D4433 0%, #2c5e47 100%); /* Deep Water Green Gradient */
+    /* OR use your Towpath Beige: background-color: #F6F1E7; */
+}
         h1 {
             text-align: center;
             color: #fff;
@@ -256,17 +254,12 @@
             </div>
         </div>
 
-        <div class="panel">
-            <h3>Upcoming Features / Results</h3>
-            <div id="routeResult" style="margin-top:10px; font-size:15px; text-align:center;">
-                <br><br>Select start point and<br>click Calculate
-            </div>
-        </div>
-
-        <div class="panel map-panel">
-            <div id="map"></div>
-        </div>
+       <div class="panel">
+    <h3>Local Mooring Status</h3>
+    <div id="routeResult" style="margin-top:10px; font-size:15px;">
+        <p style="text-align:center;">Loading live mooring data...</p>
     </div>
+</div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
