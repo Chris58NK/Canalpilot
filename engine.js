@@ -62,14 +62,13 @@ function populateDropdowns() {
         }
     };
 
-   // The Perfect Match translation sheet!
     addToMaster(typeof locksData !== 'undefined' ? locksData : undefined, "Lock");
     addToMaster(typeof bridgesData !== 'undefined' ? bridgesData : undefined, "Bridge");
     addToMaster(typeof tunnelsData !== 'undefined' ? tunnelsData : undefined, "Tunnel");
-    addToMaster(typeof winding !== 'undefined' ? winding : undefined, "Winding Hole"); // The one you fixed!
+    addToMaster(typeof windingHolesData !== 'undefined' ? windingHolesData : undefined, "Winding Hole"); // <-- Matched!
     addToMaster(typeof aqueductsData !== 'undefined' ? aqueductsData : undefined, "Aqueduct");
-    addToMaster(typeof wharvesData !== 'undefined' ? wharvesData : undefined, "Wharf/Marina");
-    addToMaster(typeof tunnelPortals !== 'undefined' ? tunnelPortals : undefined, "Tunnel Portal"); // The other one you fixed!
+    addToMaster(typeof wharvesData !== 'undefined' ? wharvesData : undefined, "Wharf/Marina"); // <-- Matched!
+    addToMaster(typeof tunnelPortalsData !== 'undefined' ? tunnelPortalsData : undefined, "Tunnel Portal"); // <-- Matched!
     addToMaster(typeof facilitiesData !== 'undefined' ? facilitiesData : undefined, "Facility");
     masterDatabase.sort((a, b) => a.name.localeCompare(b.name));
     masterDatabase.forEach(item => {
