@@ -1,4 +1,4 @@
- console.log("🚀 engine.js is loading...");
+console.log("🚀 CanalPilot Engine: Loading Advanced Navigation & Data Fusion...");
 
 // --- 1. GLOBAL VARIABLES ---
 let masterDatabase = [];
@@ -11,11 +11,12 @@ let routeMarkers = [];
 
 // --- 2. MAP SETUP ---
 function initMap() {
-    console.log("🗺️ Initializing map...");
+    console.log("🗺️ Initializing Leaflet map...");
     const mapDiv = document.getElementById('map');
     if (!mapDiv) return;
     
-    map = L.map('map').setView([52.5, -1.5], 7); 
+    // Centered on the Leicester Line/Kilworth area
+    map = L.map('map').setView([52.454, -1.055], 11); 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '© OpenStreetMap'
@@ -23,14 +24,43 @@ function initMap() {
 
     if (typeof networkData !== 'undefined') {
         L.geoJSON(networkData, {
-            style: { color: '#007BFF', weight: 3, opacity: 0.8 }
+            style: { color: '#1D4433', weight: 4, opacity: 0.6 } // Deep Green network lines
         }).addTo(map);
     }
 }
 
-// --- 3. POPULATE DROPDOWNS ---
+// --- 3. FETCH LIVE MOORING DATA (The "Anxiety Management" Layer) ---
+async function loadLiveMoorings() {
+    const resultDisplay = document.getElementById('routeResult');
+    try {
+        const response = await fetch('moorings.json');
+        const moorings = await response.json();
+        
+        let mooringHTML = `
+            <div style="margin-bottom: 20px; border-bottom: 3px solid #6FAF6F; padding-bottom: 10px;">
+                <h4 style="margin:0; color:#1D4433;">📍 Local Mooring Status</h4>
+        `;
+        
+        moorings.forEach(spot => {
+            mooringHTML += `
+                <div style="background: white; padding: 12px; border-left: 6px solid #6FAF6F; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); color: #333;">
+                    <strong style="color: #1D4433; font-size: 14px;">${spot.name}</strong><br>
+                    <small>Stay: ${spot.limit} | Facilities: ${spot.facilities.join(', ')}</small>
+                </div>
+            `;
+        });
+        
+        mooringHTML += `</div>`;
+        resultDisplay.innerHTML = mooringHTML + resultDisplay.innerHTML;
+        
+    } catch (e) {
+        console.log("Mooring data file not found, waiting for user route...");
+    }
+}
+
+// --- 4. POPULATE DROPDOWNS ---
 function populateDropdowns() {
-    console.log("📋 Populating dropdowns...");
+    console.log("📋 Populating infrastructure dropdowns...");
     const list = document.getElementById('lockList');
     if (!list) return;
 
@@ -41,11 +71,8 @@ function populateDropdowns() {
         if (typeof data !== 'undefined' && data.features) {
             data.features.forEach(feature => { 
                 if (!feature.geometry || !feature.geometry.coordinates) return;
-
                 let coords = feature.geometry.coordinates;
-                while (Array.isArray(coords[0])) {
-                    coords = coords[0];
-                }
+                while (Array.isArray(coords[0])) { coords = coords[0]; }
 
                 if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
                     const rawName = feature.properties.sap_description || feature.properties.name || `Unnamed ${type}`;
@@ -64,9 +91,7 @@ function populateDropdowns() {
     addToMaster(typeof bridgesData !== 'undefined' ? bridgesData : undefined, "Bridge");
     addToMaster(typeof tunnelsData !== 'undefined' ? tunnelsData : undefined, "Tunnel");
     addToMaster(typeof windingData !== 'undefined' ? windingData : undefined, "Winding Hole");
-    addToMaster(typeof aqueductsData !== 'undefined' ? aqueductsData : undefined, "Aqueduct");
     addToMaster(typeof wharvesData !== 'undefined' ? wharvesData : undefined, "Wharf/Marina");
-    addToMaster(typeof tunnelPortalsData !== 'undefined' ? tunnelPortalsData : undefined, "Tunnel Portal");
     addToMaster(typeof facilitiesData !== 'undefined' ? facilitiesData : undefined, "Facility");
 
     masterDatabase.sort((a, b) => a.name.localeCompare(b.name));
@@ -77,9 +102,9 @@ function populateDropdowns() {
     });
 }
 
-// --- 4. BUILD THE NAVIGATION GRAPH ---
+// --- 5. BUILD THE NAVIGATION GRAPH ---
 function buildGraph() {
-    console.log("🕸️ Building canal routing graph...");
+    console.log("🕸️ Building canal routing graph (Dijkstra-ready)...");
     canalGraph = {};
     if (typeof networkData === 'undefined') return;
 
@@ -91,12 +116,9 @@ function buildGraph() {
                 const p2 = coords[i+1];
                 const id1 = p1.join(','); 
                 const id2 = p2.join(',');
-                
                 const dist = turf.distance(turf.point(p1), turf.point(p2), {units: 'miles'});
-                
                 if (!canalGraph[id1]) canalGraph[id1] = {};
                 if (!canalGraph[id2]) canalGraph[id2] = {};
-                
                 canalGraph[id1][id2] = dist;
                 canalGraph[id2][id1] = dist; 
             }
@@ -104,24 +126,7 @@ function buildGraph() {
     });
 }
 
-// --- 5. FIND CLOSEST CANAL POINT ---
-function findClosestNode(targetCoords) {
-    let closestId = null;
-    let minDistance = Infinity;
-    const targetPt = turf.point(targetCoords);
-    
-    for (const nodeId in canalGraph) {
-        const [lon, lat] = nodeId.split(',').map(Number);
-        const dist = turf.distance(targetPt, turf.point([lon, lat]), {units: 'miles'});
-        if (dist < minDistance) {
-            minDistance = dist;
-            closestId = nodeId;
-        }
-    }
-    return closestId;
-}
-
-// --- 6. CALCULATE ROUTE ---
+// --- 6. ROUTE CALCULATOR ---
 function calculateRoute() {
     const startVal = document.getElementById('startNode').value;
     const endVal = document.getElementById('endNode').value;
@@ -135,43 +140,39 @@ function calculateRoute() {
         return;
     }
 
-    resultDisplay.innerHTML = "<i>Calculating water route... Please wait...</i>";
+    resultDisplay.innerHTML = "<i>🔄 Calculating water route via Dijkstra...</i>";
 
     setTimeout(() => {
+        const findClosestNode = (targetCoords) => {
+            let closestId = null; let minDistance = Infinity;
+            const targetPt = turf.point(targetCoords);
+            for (const nodeId in canalGraph) {
+                const [lon, lat] = nodeId.split(',').map(Number);
+                const dist = turf.distance(targetPt, turf.point([lon, lat]), {units: 'miles'});
+                if (dist < minDistance) { minDistance = dist; closestId = nodeId; }
+            }
+            return closestId;
+        };
+
         const startNodeId = findClosestNode(startPoint.coords);
         const endNodeId = findClosestNode(endPoint.coords);
 
-        const distances = {};
-        const previousNodes = {}; 
-        let activeNodes = new Map();
-        
-        for (let node in canalGraph) {
-            distances[node] = Infinity;
-            previousNodes[node] = null;
-        }
-        distances[startNodeId] = 0;
-        activeNodes.set(startNodeId, 0);
+        // --- DIJKSTRA ALGORITHM ---
+        const distances = {}; const previousNodes = {}; let activeNodes = new Map();
+        for (let node in canalGraph) { distances[node] = Infinity; previousNodes[node] = null; }
+        distances[startNodeId] = 0; activeNodes.set(startNodeId, 0);
 
         while (activeNodes.size > 0) {
-            let currNode = null;
-            let minVal = Infinity;
-            
+            let currNode = null; let minVal = Infinity;
             for (let [node, dist] of activeNodes.entries()) {
-                if (dist < minVal) {
-                    minVal = dist;
-                    currNode = node;
-                }
+                if (dist < minVal) { minVal = dist; currNode = node; }
             }
-
             if (currNode === null || currNode === endNodeId) break; 
-            
             activeNodes.delete(currNode);
-
             for (let neighbor in canalGraph[currNode]) {
                 let alt = distances[currNode] + canalGraph[currNode][neighbor];
                 if (alt < distances[neighbor]) {
-                    distances[neighbor] = alt;
-                    previousNodes[neighbor] = currNode; 
+                    distances[neighbor] = alt; previousNodes[neighbor] = currNode; 
                     activeNodes.set(neighbor, alt);
                 }
             }
@@ -180,51 +181,32 @@ function calculateRoute() {
         const totalMiles = distances[endNodeId];
 
         if (totalMiles === Infinity) {
-            resultDisplay.innerHTML = `<span style='color:red;'>❌ No connected water route found.</span>`;
+            resultDisplay.innerHTML = `<span style='color:red;'>❌ No connected route found.</span>`;
         } else {
-            let pathCoords = [];
-            let step = endNodeId;
+            let pathCoords = []; let step = endNodeId;
             while (step) {
                 let [lon, lat] = step.split(',').map(Number);
-                pathCoords.push([lat, lon]); 
-                step = previousNodes[step];
+                pathCoords.push([lat, lon]); step = previousNodes[step];
             }
-            
-            // Reverse the path so it goes Start -> End!
             pathCoords.reverse();
 
-            // Draw Route
             if (currentRouteLayer) map.removeLayer(currentRouteLayer);
             if (startMarker) map.removeLayer(startMarker);
             if (endMarker) map.removeLayer(endMarker);
 
-            currentRouteLayer = L.polyline(pathCoords, {
-                color: '#ff2a00',
-                weight: 6,
-                opacity: 0.9,
-                lineCap: 'round'
-            }).addTo(map);
-
-            startMarker = L.marker([startPoint.coords[1], startPoint.coords[0]])
-                .addTo(map).bindPopup(`<b>🟢 Start:</b> ${startPoint.name}`);
-
-            endMarker = L.marker([endPoint.coords[1], endPoint.coords[0]])
-                .addTo(map).bindPopup(`<b>🔴 End:</b> ${endPoint.name}`);
-
+            currentRouteLayer = L.polyline(pathCoords, { color: '#ff2a00', weight: 6, opacity: 0.9 }).addTo(map);
+            startMarker = L.marker([startPoint.coords[1], startPoint.coords[0]]).addTo(map);
+            endMarker = L.marker([endPoint.coords[1], endPoint.coords[0]]).addTo(map);
             map.fitBounds(currentRouteLayer.getBounds(), { padding: [40, 40] }); 
 
-            // Get the speed for calculations
             const speed = parseFloat(document.getElementById('speed').value) || 3;
-            
-            // Generate the Itinerary HTML from the scanner
             const itineraryHTML = scanWaypoints(pathCoords, speed);
 
-            // Print the Green Summary Box + The Itinerary List
             resultDisplay.innerHTML = `
-                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-bottom: 15px;">
-                    <strong>🗺️ Route Mapped Successfully!</strong><br><br>
+                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-bottom: 15px; color: #333;">
+                    <strong>🗺️ Journey Optimized!</strong><br><br>
                     Distance: <b>${totalMiles.toFixed(2)} miles</b><br>
-                    Est. Travel Time (${speed}mph): <b>${(totalMiles / speed).toFixed(1)} hours</b>
+                    Est. Time (${speed}mph): <b>${(totalMiles / speed).toFixed(1)} hours</b>
                 </div>
                 ${itineraryHTML}
             `;
@@ -232,113 +214,46 @@ function calculateRoute() {
     }, 50); 
 }
 
-// --- 7. THE WAYPOINT SCANNER & ITINERARY ---
-window.setAllFilters = function(state) {
-    document.querySelectorAll('.wp-filter').forEach(cb => cb.checked = state);
-};
-
+// --- 7. THE WAYPOINT SCANNER ---
 function scanWaypoints(pathCoords, speed) {
-    console.log("🔍 Scanning and building itinerary...");
-
     routeMarkers.forEach(marker => map.removeLayer(marker));
     routeMarkers = [];
-    let itinerary = []; // Memory for our printed list
+    let itinerary = []; 
 
     const activeFilters = Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value);
-    if (activeFilters.length === 0 || pathCoords.length < 2) return ""; 
-
-    const typeMapping = {
-        'lock': ['Lock'],
-        'bridge': ['Bridge'],
-        'winding': ['Winding Hole'],
-        'marina': ['Wharf/Marina'],
-        'wharf': ['Wharf/Marina'],
-        'aqueduct': ['Aqueduct'],
-        'tunnel': ['Tunnel', 'Tunnel Portal'],
-        'junction': ['Junction']
-    };
-
-    let allowedTypes = [];
-    activeFilters.forEach(filter => {
-        if (typeMapping[filter]) allowedTypes.push(...typeMapping[filter]);
-    });
-
     const turfLine = turf.lineString(pathCoords.map(c => [c[1], c[0]]));
     const startPoint = turf.point([pathCoords[0][1], pathCoords[0][0]]);
 
     masterDatabase.forEach(item => {
-        if (allowedTypes.includes(item.type)) {
-            const pt = turf.point(item.coords); 
-            const distToLine = turf.pointToLineDistance(pt, turfLine, {units: 'miles'});
-            
-            if (distToLine < 0.05) {
-                const markerColor = getMarkerColor(item.type);
-                const marker = L.circleMarker([item.coords[1], item.coords[0]], {
-                    radius: 6, fillColor: markerColor, color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 1
-                }).bindPopup(`<b>${item.name}</b>`);
-                marker.addTo(map);
-                routeMarkers.push(marker);
+        const pt = turf.point(item.coords); 
+        const distToLine = turf.pointToLineDistance(pt, turfLine, {units: 'miles'});
+        
+        if (distToLine < 0.05) {
+            const snapped = turf.nearestPointOnLine(turfLine, pt);
+            const sliced = turf.lineSlice(startPoint, snapped, turfLine);
+            const milesAlong = turf.length(sliced, {units: 'miles'});
 
-                // --- NEW: ITINERARY MATH ---
-                const snapped = turf.nearestPointOnLine(turfLine, pt);
-                const sliced = turf.lineSlice(startPoint, snapped, turfLine);
-                const milesAlongRoute = turf.length(sliced, {units: 'miles'});
-
-                itinerary.push({
-                    name: item.name,
-                    type: item.type,
-                    distance: milesAlongRoute,
-                    color: markerColor
-                });
-            }
+            itinerary.push({ name: item.name, type: item.type, distance: milesAlong });
         }
     });
 
-    console.log(`✅ Dropped ${routeMarkers.length} waypoint pins.`);
-
-    // Sort the itinerary by distance from start
     itinerary.sort((a, b) => a.distance - b.distance);
-
-    // Build the HTML list
-    let html = `<div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">`;
-    
+    let html = `<div style="max-height: 400px; overflow-y: auto; color: #333;">`;
     itinerary.forEach(step => {
         const hours = step.distance / speed;
-        const h = Math.floor(hours);
-        const m = Math.round((hours - h) * 60);
-        const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
-
-        html += `
-        <div style="background: rgba(255,255,255,0.8); margin-bottom: 8px; padding: 10px; border-radius: 6px; border-left: 4px solid ${step.color}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <div style="font-size: 13px;">
-                <span class="badge" style="background-color: ${step.color};">${step.type.toUpperCase()}</span><br>
-                <b style="color: #333;">${step.name}</b>
-            </div>
-            <div style="text-align: right; font-size: 12px; color: #555;">
-                <b>${step.distance.toFixed(2)} mi</b><br>
-                ⏱️ ${timeString}
-            </div>
-        </div>`;
+        const timeStr = hours < 1 ? `${Math.round(hours*60)}m` : `${Math.floor(hours)}h ${Math.round((hours%1)*60)}m`;
+        html += `<div style="background:rgba(255,255,255,0.8); margin-bottom:8px; padding:10px; border-radius:6px; border-left:4px solid #1D4433;">
+                    <b>${step.name}</b> (${step.type})<br>
+                    <small>📍 ${step.distance.toFixed(1)} mi | ⏱️ ${timeStr}</small>
+                 </div>`;
     });
-    
-    html += `</div>`;
-    return html;
-}
-
-function getMarkerColor(type) {
-    if (type === 'Lock') return '#ff6b6b';
-    if (type === 'Bridge') return '#4ecdc4';
-    if (type === 'Winding Hole') return '#e74c3c';
-    if (type === 'Wharf/Marina') return '#45b7d1';
-    if (type === 'Aqueduct') return '#f39c12';
-    if (type === 'Tunnel' || type === 'Tunnel Portal') return '#95a5a6';
-    return '#3498db'; 
+    return html + `</div>`;
 }
 
 // --- 8. START ENGINE ON LOAD ---
 window.onload = function() {
-    console.log("🏁 Window loaded, starting engine...");
     initMap();
     populateDropdowns();
     buildGraph(); 
+    loadLiveMoorings(); // Fuse your custom mooring data immediately
 };
