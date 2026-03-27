@@ -1,1 +1,23 @@
-
+[
+  {
+    "name": "Foxton Locks (Top)",
+    "type": "Visitor",
+    "limit": "48h",
+    "facilities": ["Water", "Elsan", "Bins"],
+    "lat_long": [52.499, -0.967]
+  },
+  {
+    "name": "Market Harborough Arm",
+    "type": "Visitor",
+    "limit": "14d",
+    "facilities": ["Full Service", "Pump-out"],
+    "lat_long": [52.482, -0.921]
+  },
+  {
+    "name": "Kilworth Rural Towpath",
+    "type": "Rural",
+    "limit": "14d",
+    "facilities": ["None - Nature only"],
+    "lat_long": [52.454, -1.055]
+  }
+]
