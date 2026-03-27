@@ -1,6 +1,6 @@
 // --- 1. GLOBAL VARIABLES ---
 var map, masterDatabase = [], canalGraph = {}, currentRouteLayer = null;
-var routeMarkers = [];
+var routeMarkers = []; 
 
 // --- 2. MAP SETUP ---
 function initMap() {
@@ -8,38 +8,30 @@ function initMap() {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     if (typeof networkData !== 'undefined') {
-        L.geoJSON(networkData, { style: { color: '#1D4433', weight: 3, opacity: 0.4 } }).addTo(map);
+        L.geoJSON(networkData, { style: { color: '#1D4433', weight: 3, opacity: 0.3 } }).addTo(map);
     }
 }
 
-// --- 3. PERSISTENT UI (Fixes the "disappearing" bug) ---
+// --- 3. PERSISTENT MOORING LIST ---
 async function loadLiveMoorings() {
-    const display = document.getElementById('routeResult');
+    const section = document.getElementById('mooring-panel');
     try {
         const response = await fetch('moorings.json');
         const moorings = await response.json();
         
-        // We create two separate 'divs' inside your panel
-        display.innerHTML = `
-            <div id="mooring-section" style="margin-bottom:20px;">
-                <h4 style="color:#1D4433; border-bottom:2px solid #6FAF6F;">📍 Mooring Status</h4>
-                ${moorings.map(m => `
-                    <div style="background:white; padding:8px; margin-bottom:5px; border-left:4px solid #6FAF6F; border-radius:4px; font-size:12px;">
-                        <b>${m.name}</b> (${m.limit})<br><small>${m.facilities.join(', ')}</small>
-                    </div>
-                `).join('')}
+        section.innerHTML = `<h4>📍 Live Mooring Status</h4>` + moorings.map(m => `
+            <div style="background:white; padding:10px; margin-bottom:8px; border-left:5px solid #6FAF6F; border-radius:4px; font-size:12px; color:#333;">
+                <b>${m.name}</b> (${m.limit})<br>
+                <small>${m.facilities.join(', ')}</small>
             </div>
-            <div id="itinerary-section">
-                <p style="text-align:center; font-style:italic; color:#666;">Route info will appear here...</p>
-            </div>
-        `;
-    } catch(e) { console.log("Moorings load pending..."); }
+        `).join('');
+    } catch(e) { console.log("Mooring load pending..."); }
 }
 
 // --- 4. DROPDOWN POPULATOR ---
 function populateDropdowns() {
     const list = document.getElementById('lockList');
-    const addData = (data, type) => {
+    const addToMaster = (data, type) => {
         if (typeof data !== 'undefined' && data.features) {
             data.features.forEach(f => {
                 const name = f.properties.name || f.properties.sap_description || "Unnamed";
@@ -47,54 +39,57 @@ function populateDropdowns() {
             });
         }
     };
-    addData(typeof locksData !== 'undefined' ? locksData : undefined, "Lock");
-    addData(typeof bridgesData !== 'undefined' ? bridgesData : undefined, "Bridge");
+    addToMaster(typeof locksData !== 'undefined' ? locksData : undefined, "Lock");
+    addToMaster(typeof bridgesData !== 'undefined' ? bridgesData : undefined, "Bridge");
     
     masterDatabase.forEach(item => {
-        let opt = document.createElement('option');
-        opt.value = item.name;
-        list.appendChild(opt);
+        let opt = document.createElement('option'); opt.value = item.name; list.appendChild(opt);
     });
 }
 
-// --- 5. THE CALCULATOR (Fixes Route Drawing & Distances) ---
+// --- 5. THE CALCULATOR (Now with Forward Distance List) ---
 function calculateRoute() {
     const startVal = document.getElementById('startNode').value;
     const endVal = document.getElementById('endNode').value;
-    const itinerary = document.getElementById('itinerary-section');
+    const itinerary = document.getElementById('itinerary-panel');
     const speed = parseFloat(document.getElementById('speed').value) || 3;
 
     const p1 = masterDatabase.find(x => x.name === startVal);
     const p2 = masterDatabase.find(x => x.name === endVal);
 
     if (!p1 || !p2) {
-        itinerary.innerHTML = "<p style='color:orange;'>⚠️ Please select locations from the list.</p>";
+        itinerary.innerHTML = "<p style='color:orange;'>⚠️ Select valid locations.</p>";
         return;
     }
 
-    // 1. CLEAR OLD ROUTE
+    // A. Drawing logic
     if (currentRouteLayer) map.removeLayer(currentRouteLayer);
-    routeMarkers.forEach(m => map.removeLayer(m));
-    routeMarkers = [];
-
-    // 2. DRAW THE ROUTE (Using a direct line for demo stability)
-    // In a full build, this uses the pathCoords from your Dijkstra logic
     const path = [[p1.coords[1], p1.coords[0]], [p2.coords[1], p2.coords[0]]];
-    currentRouteLayer = L.polyline(path, {color: '#ff2a00', weight: 6}).addTo(map);
+    currentRouteLayer = L.polyline(path, {color: 'red', weight: 6, opacity: 0.8}).addTo(map);
     map.fitBounds(currentRouteLayer.getBounds(), {padding: [50, 50]});
 
-    // 3. SHOW DISTANCES & TIME (Anxiety Management Layer)
-    const dist = (turf.distance(turf.point(p1.coords), turf.point(p2.coords))).toFixed(2);
-    const time = (dist / speed).toFixed(1);
+    // B. Distance Logic
+    const totalDist = turf.distance(turf.point(p1.coords), turf.point(p2.coords), {units: 'miles'});
+    
+    // C. Forward Scanner (Simulating waypoints along the route)
+    let waypointsHTML = "";
+    masterDatabase.forEach(item => {
+        const d = turf.distance(turf.point(p1.coords), turf.point(item.coords), {units: 'miles'});
+        if (d < totalDist && d > 0.1) {
+            waypointsHTML += `
+                <div style="background:rgba(255,255,255,0.7); padding:8px; margin-bottom:5px; border-left:3px solid #1D4433; font-size:11px; color:#333;">
+                    <b>${item.name}</b><br>
+                    ${d.toFixed(1)} miles ahead | ⏱️ ${((d/speed)*60).toFixed(0)} mins
+                </div>`;
+        }
+    });
 
     itinerary.innerHTML = `
         <h4 style="color:#1D4433; border-bottom:2px solid #6FAF6F;">🗺️ Planned Route</h4>
-        <div style="background:#e8f5e9; padding:12px; border-radius:8px;">
-            <b>Total Distance:</b> ${dist} miles<br>
-            <b>Est. Travel Time:</b> ${time} hours<br>
-            <small>At ${speed} mph avg speed</small>
+        <div style="background:#e8f5e9; padding:12px; border-radius:8px; color:#333; margin-bottom:10px;">
+            <b>Total: ${totalDist.toFixed(1)} miles</b> | <b>${(totalDist/speed).toFixed(1)} hrs</b>
         </div>
-        <p style="font-size:12px; margin-top:10px;">🟢 Start: ${startVal}<br>🔴 End: ${endVal}</p>
+        ${waypointsHTML || "<p style='color:#666;'>No locks or bridges detected.</p>"}
     `;
 }
 
