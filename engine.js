@@ -1,96 +1,348 @@
-var map, masterDatabase = [], currentRouteLayer = null;
+console.log("🚀 engine.js is loading...");
 
-// --- 1. SYNC GUARD ---
-window.onload = function() {
-    console.log("🚀 Page loaded. Checking Data Layers...");
-    initMap();
-    populateDropdowns();
-    loadMoorings();
-};
+// --- 1. GLOBAL VARIABLES ---
+let masterDatabase = [];
+let canalGraph = {};
+let map; 
+let currentRouteLayer = null; 
+let startMarker = null;
+let endMarker = null;
+let routeMarkers = []; 
 
-// --- 2. MAP INITIALIZATION ---
+// --- 2. MAP SETUP ---
 function initMap() {
-    map = L.map('map').setView([52.454, -1.055], 11); 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    console.log("🗺️ Initializing map...");
+    const mapDiv = document.getElementById('map');
+    if (!mapDiv) return;
+    
+    map = L.map('map').setView([52.5, -1.5], 7); 
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-    // Fuse networkData if present
-    if (typeof networkData !== 'undefined') {
-        L.geoJSON(networkData, { style: { color: '#007BFF', weight: 4, opacity: 0.5 } }).addTo(map);
-        console.log("✅ Network Data Fused.");
-    } else {
-        console.error("❌ networkData is missing from folder or script tags.");
+    // Fallback support for network or networkData
+    const networkFeatures = typeof network !== 'undefined' ? network : (typeof networkData !== 'undefined' ? networkData : undefined);
+    if (networkFeatures) {
+        L.geoJSON(networkFeatures, {
+            style: { color: '#007BFF', weight: 3, opacity: 0.8 }
+        }).addTo(map);
     }
 }
 
-// --- 3. MOORING STATUS (Persistent) ---
-async function loadMoorings() {
-    const content = document.getElementById('mooring-content');
-    try {
-        const response = await fetch('moorings.json');
-        const moorings = await response.json();
-        content.innerHTML = moorings.map(m => `
-            <div style="padding:10px; border-bottom:1px solid #eee; font-size:13px;">
-                <strong style="color:#1D4433;">${m.name}</strong><br>
-                <small>${m.limit} | ${m.facilities.join(', ')}</small>
-            </div>
-        `).join('');
-    } catch(e) { content.innerHTML = "No custom mooring data found."; }
-}
-
-// --- 4. DROPDOWN POPULATOR ---
+// --- 3. POPULATE DROPDOWNS ---
 function populateDropdowns() {
+    console.log("📋 Populating dropdowns...");
     const list = document.getElementById('lockList');
+    if (!list) return;
+
+    list.innerHTML = ""; 
+    masterDatabase = [];
+
     const addToMaster = (data, type) => {
         if (typeof data !== 'undefined' && data.features) {
-            data.features.forEach(f => {
-                const name = f.properties.name || f.properties.sap_description || "Unnamed";
-                masterDatabase.push({ 
-                    name: `${name} (${type})`, 
-                    coords: f.geometry.coordinates, 
-                    type: type 
-                });
+            data.features.forEach(feature => { 
+                if (!feature.geometry || !feature.geometry.coordinates) return;
+
+                let coords = feature.geometry.coordinates;
+                while (Array.isArray(coords[0])) {
+                    coords = coords[0];
+                }
+
+                if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+                    const rawName = feature.properties.sap_description || feature.properties.name || `Unnamed ${type}`;
+                    const displayName = `${rawName} (${type})`; 
+                    masterDatabase.push({
+                        name: displayName,
+                        coords: [coords[0], coords[1]],
+                        type: type
+                    });
+                }
             });
         }
     };
-    addToMaster(typeof locksData !== 'undefined' ? locksData : undefined, "Lock");
-    addToMaster(typeof bridgesData !== 'undefined' ? bridgesData : undefined, "Bridge");
-    
-    masterDatabase.sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
-        let opt = document.createElement('option');
-        opt.value = item.name;
-        list.appendChild(opt);
+
+    // Cleaned up to match your new file variables perfectly!
+    addToMaster(typeof locks !== 'undefined' ? locks : undefined, "Lock");
+    addToMaster(typeof bridges !== 'undefined' ? bridges : undefined, "Bridge");
+    addToMaster(typeof tunnels !== 'undefined' ? tunnels : undefined, "Tunnel");
+    addToMaster(typeof winding !== 'undefined' ? winding : undefined, "Winding Hole");
+    addToMaster(typeof aqueducts !== 'undefined' ? aqueducts : undefined, "Aqueduct");
+    addToMaster(typeof wharves !== 'undefined' ? wharves : undefined, "Wharf/Marina");
+    addToMaster(typeof tunnelPortals !== 'undefined' ? tunnelPortals : undefined, "Tunnel Portal");
+    addToMaster(typeof facilities !== 'undefined' ? facilities : undefined, "Facility");
+
+    masterDatabase.sort((a, b) => a.name.localeCompare(b.name));
+    masterDatabase.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.name;
+        list.appendChild(option);
     });
 }
 
-// --- 5. CALCULATOR & ROUTING ---
+// --- 4. BUILD THE NAVIGATION GRAPH ---
+function buildGraph() {
+    console.log("🕸️ Building canal routing graph...");
+    canalGraph = {};
+    const networkFeatures = typeof network !== 'undefined' ? network : (typeof networkData !== 'undefined' ? networkData : undefined);
+    if (!networkFeatures) return;
+
+    networkFeatures.features.forEach(feature => {
+        if (feature.geometry && feature.geometry.type === 'LineString') {
+            const coords = feature.geometry.coordinates;
+            for (let i = 0; i < coords.length - 1; i++) {
+                const p1 = coords[i];
+                const p2 = coords[i+1];
+                const id1 = p1.join(','); 
+                const id2 = p2.join(',');
+                
+                const dist = turf.distance(turf.point(p1), turf.point(p2), {units: 'miles'});
+                
+                if (!canalGraph[id1]) canalGraph[id1] = {};
+                if (!canalGraph[id2]) canalGraph[id2] = {};
+                
+                canalGraph[id1][id2] = dist;
+                canalGraph[id2][id1] = dist; 
+            }
+        }
+    });
+}
+
+// --- 5. FIND CLOSEST CANAL POINT ---
+function findClosestNode(targetCoords) {
+    let closestId = null;
+    let minDistance = Infinity;
+    const targetPt = turf.point(targetCoords);
+    
+    for (const nodeId in canalGraph) {
+        const [lon, lat] = nodeId.split(',').map(Number);
+        const dist = turf.distance(targetPt, turf.point([lon, lat]), {units: 'miles'});
+        if (dist < minDistance) {
+            minDistance = dist;
+            closestId = nodeId;
+        }
+    }
+    return closestId;
+}
+
+// --- 6. CALCULATE ROUTE ---
 function calculateRoute() {
     const startVal = document.getElementById('startNode').value;
     const endVal = document.getElementById('endNode').value;
-    const content = document.getElementById('itinerary-content');
+    const resultDisplay = document.getElementById('routeResult');
 
-    const p1 = masterDatabase.find(x => x.name === startVal);
-    const p2 = masterDatabase.find(x => x.name === endVal);
+    const startPoint = masterDatabase.find(item => item.name === startVal);
+    const endPoint = masterDatabase.find(item => item.name === endVal);
 
-    if (!p1 || !p2) {
-        content.innerHTML = "⚠️ Please select valid locations.";
+    if (!startPoint || !endPoint) {
+        resultDisplay.innerHTML = "<span style='color:#d97706;'>⚠️ Please select valid points.</span>";
         return;
     }
 
-    // Drawing the Line
-    if (currentRouteLayer) map.removeLayer(currentRouteLayer);
-    const latlngs = [[p1.coords[1], p1.coords[0]], [p2.coords[1], p2.coords[0]]];
-    currentRouteLayer = L.polyline(latlngs, {color: '#ff2a00', weight: 6}).addTo(map);
-    map.fitBounds(currentRouteLayer.getBounds(), {padding: [50, 50]});
+    resultDisplay.innerHTML = "<i>Calculating water route... Please wait...</i>";
 
-    // Distance Calculation
-    const dist = turf.distance(turf.point(p1.coords), turf.point(p2.coords), {units: 'miles'});
-    
-    content.innerHTML = `
-        <div style="background:#e8f5e9; padding:10px; border-radius:6px; margin-bottom:15px;">
-            <strong>Route Found</strong><br>
-            Distance: <b>${dist.toFixed(2)} miles</b><br>
-            Time (3mph): <b>${(dist / 3).toFixed(1)} hours</b>
-        </div>
-        <p style="font-size:12px; color:#666;">🟢 ${startVal}<br>🔴 ${endVal}</p>
-    `;
+    setTimeout(() => {
+        const startNodeId = findClosestNode(startPoint.coords);
+        const endNodeId = findClosestNode(endPoint.coords);
+
+        const distances = {};
+        const previousNodes = {}; 
+        let activeNodes = new Map();
+        
+        for (let node in canalGraph) {
+            distances[node] = Infinity;
+            previousNodes[node] = null;
+        }
+        distances[startNodeId] = 0;
+        activeNodes.set(startNodeId, 0);
+
+        while (activeNodes.size > 0) {
+            let currNode = null;
+            let minVal = Infinity;
+            
+            for (let [node, dist] of activeNodes.entries()) {
+                if (dist < minVal) {
+                    minVal = dist;
+                    currNode = node;
+                }
+            }
+
+            if (currNode === null || currNode === endNodeId) break; 
+            
+            activeNodes.delete(currNode);
+
+            for (let neighbor in canalGraph[currNode]) {
+                let alt = distances[currNode] + canalGraph[currNode][neighbor];
+                if (alt < distances[neighbor]) {
+                    distances[neighbor] = alt;
+                    previousNodes[neighbor] = currNode; 
+                    activeNodes.set(neighbor, alt);
+                }
+            }
+        }
+
+        const totalMiles = distances[endNodeId];
+
+        if (totalMiles === Infinity) {
+            resultDisplay.innerHTML = `<span style='color:red;'>❌ No connected water route found.</span>`;
+        } else {
+            let pathCoords = [];
+            let step = endNodeId;
+            while (step) {
+                let [lon, lat] = step.split(',').map(Number);
+                pathCoords.push([lat, lon]); 
+                step = previousNodes[step];
+            }
+            
+            // Reverse the path so it goes Start -> End!
+            pathCoords.reverse();
+
+            // Draw Route
+            if (currentRouteLayer) map.removeLayer(currentRouteLayer);
+            if (startMarker) map.removeLayer(startMarker);
+            if (endMarker) map.removeLayer(endMarker);
+
+            currentRouteLayer = L.polyline(pathCoords, {
+                color: '#ff2a00',
+                weight: 6,
+                opacity: 0.9,
+                lineCap: 'round'
+            }).addTo(map);
+
+            startMarker = L.marker([startPoint.coords[1], startPoint.coords[0]])
+                .addTo(map).bindPopup(`<b>🟢 Start:</b> ${startPoint.name}`);
+
+            endMarker = L.marker([endPoint.coords[1], endPoint.coords[0]])
+                .addTo(map).bindPopup(`<b>🔴 End:</b> ${endPoint.name}`);
+
+            map.fitBounds(currentRouteLayer.getBounds(), { padding: [40, 40] }); 
+
+            // Get the speed for calculations
+            const speed = parseFloat(document.getElementById('speed').value) || 3;
+            
+            // Generate the Itinerary HTML from the scanner
+            const itineraryHTML = scanWaypoints(pathCoords, speed);
+
+            // Print the Green Summary Box + The Itinerary List
+            resultDisplay.innerHTML = `
+                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-bottom: 15px;">
+                    <strong>🗺️ Route Mapped Successfully!</strong><br><br>
+                    Distance: <b>${totalMiles.toFixed(2)} miles</b><br>
+                    Est. Travel Time (${speed}mph): <b>${(totalMiles / speed).toFixed(1)} hours</b>
+                </div>
+                ${itineraryHTML}
+            `;
+        }
+    }, 50); 
 }
+
+// --- 7. THE WAYPOINT SCANNER & ITINERARY ---
+window.setAllFilters = function(state) {
+    document.querySelectorAll('.wp-filter').forEach(cb => cb.checked = state);
+};
+
+function scanWaypoints(pathCoords, speed) {
+    console.log("🔍 Scanning and building itinerary...");
+
+    routeMarkers.forEach(marker => map.removeLayer(marker));
+    routeMarkers = [];
+    let itinerary = []; 
+
+    const activeFilters = Array.from(document.querySelectorAll('.wp-filter:checked')).map(cb => cb.value);
+    if (activeFilters.length === 0 || pathCoords.length < 2) return ""; 
+
+    const typeMapping = {
+        'lock': ['Lock'],
+        'bridge': ['Bridge'],
+        'winding': ['Winding Hole'],
+        'marina': ['Wharf/Marina'],
+        'wharf': ['Wharf/Marina'],
+        'aqueduct': ['Aqueduct'],
+        'tunnel': ['Tunnel', 'Tunnel Portal'],
+        'junction': ['Junction']
+    };
+
+    let allowedTypes = [];
+    activeFilters.forEach(filter => {
+        if (typeMapping[filter]) allowedTypes.push(...typeMapping[filter]);
+    });
+
+    const turfLine = turf.lineString(pathCoords.map(c => [c[1], c[0]]));
+    const startPoint = turf.point([pathCoords[0][1], pathCoords[0][0]]);
+
+    masterDatabase.forEach(item => {
+        if (allowedTypes.includes(item.type)) {
+            const pt = turf.point(item.coords); 
+            const distToLine = turf.pointToLineDistance(pt, turfLine, {units: 'miles'});
+            
+            if (distToLine < 0.05) {
+                const markerColor = getMarkerColor(item.type);
+                const marker = L.circleMarker([item.coords[1], item.coords[0]], {
+                    radius: 6, fillColor: markerColor, color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 1
+                }).bindPopup(`<b>${item.name}</b>`);
+                marker.addTo(map);
+                routeMarkers.push(marker);
+
+                // --- ITINERARY MATH ---
+                const snapped = turf.nearestPointOnLine(turfLine, pt);
+                const sliced = turf.lineSlice(startPoint, snapped, turfLine);
+                const milesAlongRoute = turf.length(sliced, {units: 'miles'});
+
+                itinerary.push({
+                    name: item.name,
+                    type: item.type,
+                    distance: milesAlongRoute,
+                    color: markerColor
+                });
+            }
+        }
+    });
+
+    console.log(`✅ Dropped ${routeMarkers.length} waypoint pins.`);
+
+    // Sort the itinerary by distance from start
+    itinerary.sort((a, b) => a.distance - b.distance);
+
+    // Build the HTML list
+    let html = `<div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">`;
+    
+    itinerary.forEach(step => {
+        const hours = step.distance / speed;
+        const h = Math.floor(hours);
+        const m = Math.round((hours - h) * 60);
+        const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
+
+        html += `
+        <div style="background: rgba(255,255,255,0.8); margin-bottom: 8px; padding: 10px; border-radius: 6px; border-left: 4px solid ${step.color}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 13px;">
+                <span class="badge" style="background-color: ${step.color};">${step.type.toUpperCase()}</span><br>
+                <b style="color: #333;">${step.name}</b>
+            </div>
+            <div style="text-align: right; font-size: 12px; color: #555;">
+                <b>${step.distance.toFixed(2)} mi</b><br>
+                ⏱️ ${timeString}
+            </div>
+        </div>`;
+    });
+    
+    html += `</div>`;
+    return html;
+}
+
+function getMarkerColor(type) {
+    if (type === 'Lock') return '#ff6b6b';
+    if (type === 'Bridge') return '#4ecdc4';
+    if (type === 'Winding Hole') return '#e74c3c';
+    if (type === 'Wharf/Marina') return '#45b7d1';
+    if (type === 'Aqueduct') return '#f39c12';
+    if (type === 'Tunnel' || type === 'Tunnel Portal') return '#95a5a6';
+    return '#3498db'; 
+}
+
+// --- 8. START ENGINE ON LOAD ---
+window.onload = function() {
+    console.log("🏁 Window loaded, starting engine...");
+    initMap();
+    populateDropdowns();
+    buildGraph(); 
+};
