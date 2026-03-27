@@ -62,14 +62,15 @@ function populateDropdowns() {
         }
     };
 
-    addToMaster(typeof locks !== 'undefined' ? locks : undefined, "Lock");
-    addToMaster(typeof bridges !== 'undefined' ? bridges : undefined, "Bridge");
-    addToMaster(typeof tunnels !== 'undefined' ? tunnels : undefined, "Tunnel");
-    addToMaster(typeof winding !== 'undefined' ? winding : undefined, "Winding Hole");
-    addToMaster(typeof aqueducts !== 'undefined' ? aqueducts : undefined, "Aqueduct");
-    addToMaster(typeof wharves !== 'undefined' ? wharves : undefined, "Wharf/Marina");
-    addToMaster(typeof tunnelPortals !== 'undefined' ? tunnelPortals : undefined, "Tunnel Portal");
-    addToMaster(typeof facilities !== 'undefined' ? facilities : undefined, "Facility");
+   // The Perfect Match translation sheet!
+    addToMaster(typeof locksData !== 'undefined' ? locksData : undefined, "Lock");
+    addToMaster(typeof bridgesData !== 'undefined' ? bridgesData : undefined, "Bridge");
+    addToMaster(typeof tunnelsData !== 'undefined' ? tunnelsData : undefined, "Tunnel");
+    addToMaster(typeof winding !== 'undefined' ? winding : undefined, "Winding Hole"); // The one you fixed!
+    addToMaster(typeof aqueductsData !== 'undefined' ? aqueductsData : undefined, "Aqueduct");
+    addToMaster(typeof wharvesData !== 'undefined' ? wharvesData : undefined, "Wharf/Marina");
+    addToMaster(typeof tunnelPortals !== 'undefined' ? tunnelPortals : undefined, "Tunnel Portal"); // The other one you fixed!
+    addToMaster(typeof facilitiesData !== 'undefined' ? facilitiesData : undefined, "Facility");
     masterDatabase.sort((a, b) => a.name.localeCompare(b.name));
     masterDatabase.forEach(item => {
         const option = document.createElement('option');
