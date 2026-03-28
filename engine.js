@@ -302,30 +302,35 @@ function scanWaypoints(pathCoords, speed) {
     let html = `<div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">`;
     
     itinerary.forEach((step, index) => {
-        const hours = step.distance / speed;
-        const h = Math.floor(hours);
-        const m = Math.round((hours - h) * 60);
-        const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
+    const hours = step.distance / speed;
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
 
-        // Logic for Tunnel Portal Naming (Entrance vs Exit)
-        let displayTitle = step.name;
-        if (step.type === 'Tunnel Portal') {
-            const isFirst = (index === itinerary.findIndex(wp => wp.name === step.name));
-            displayTitle = isFirst ? `${step.name} (Entrance)` : `${step.name} (Exit)`;
-        }
+    // 1. STRIP BRACKETS: Removes "(BRIDGE)" or "(LOCK)" from the raw data name
+    let cleanName = step.name.split('(')[0].trim();
 
-        html += `
-        <div style="background: #fff; margin-bottom: 4px; padding: 12px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 14px;">
-                <b style="color: #000; font-size: 1.1em; text-transform: uppercase;">${displayTitle}</b><br>
-                <span style="color: #666; font-weight: 600;">${step.type}</span>
-            </div>
-            <div style="text-align: right; font-size: 13px; color: #000; font-weight: bold;">
-                ${step.distance.toFixed(2)} mi<br>
-                ⏱️ ${timeString}
-            </div>
-        </div>`;
-    });
+    // 2. DIRECTIONAL LOGIC: Label Tunnel Portals specifically
+    let displayTitle = cleanName;
+    if (step.type === 'Tunnel Portal') {
+        const isFirst = (index === itinerary.findIndex(wp => wp.name === step.name));
+        displayTitle = isFirst ? `${cleanName} (ENTRANCE)` : `${cleanName} (EXIT)`;
+    }
+
+    // 3. ULTRA-MINIMALIST HTML: Max contrast, no sub-labels
+    html += `
+    <div style="background: #fff; margin-bottom: 2px; padding: 16px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+        <div style="flex: 1; text-align: left;">
+            <b style="color: #000; font-size: 1.25em; text-transform: uppercase; line-height: 1.1; letter-spacing: 0.5px;">
+                ${displayTitle}
+            </b>
+        </div>
+        <div style="text-align: right; font-size: 14px; color: #000; font-weight: 900; min-width: 90px;">
+            ${step.distance.toFixed(2)} mi<br>
+            ⏱️ ${timeString}
+        </div>
+    </div>`;
+});
     
     html += `</div>`;
     return html;
