@@ -330,7 +330,6 @@ function scanWaypoints(pathCoords, speed) {
     html += `</div>`;
     return html;
 }
-}
 
 function getMarkerColor(type) {
     if (type === 'Lock') return '#ff6b6b';
