@@ -301,54 +301,66 @@ function scanWaypoints(pathCoords, speed) {
     // SURGERY 2: Final HTML Generation (Sunlight Optimized / Tunnel Labeled)
     let html = `<div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">`;
     
-    itinerary.forEach((step, index) => {
+   itinerary.forEach((step, index) => {
     const hours = step.distance / speed;
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
     const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
 
-    // 1. STRIP BRACKETS: Removes "(BRIDGE)" or "(LOCK)" from the raw data name
-    let cleanName = step.name.split('(')[0].trim();
+    // 1. STRIP BRACKETS & CONVERT TO TITLE CASE
+    let cleanName = step.name.split('(')[0].trim().toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
 
-    // 2. DIRECTIONAL LOGIC: Label Tunnel Portals specifically
+    // 2. DIRECTIONAL LOGIC
     let displayTitle = cleanName;
     if (step.type === 'Tunnel Portal') {
         const isFirst = (index === itinerary.findIndex(wp => wp.name === step.name));
-        displayTitle = isFirst ? `${cleanName} (ENTRANCE)` : `${cleanName} (EXIT)`;
+        displayTitle = isFirst ? `${cleanName} (Entrance)` : `${cleanName} (Exit)`;
     }
 
-    // 3. ULTRA-MINIMALIST HTML: Max contrast, no sub-labels
+    // 3. MODERN NAV-CARD UI
     html += `
-<div style="
-    background: #fcfcfc; 
-    margin-bottom: 2px; 
-    padding: 10px 14px; 
-    border-bottom: 1px solid #edf2f7;
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center;
-">
-    <div style="flex: 1; text-align: left; padding-right: 8px;">
-        <div style="
-            color: #2d3748; 
-            font-size: 1.05em; 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            letter-spacing: 0.2px;
-            line-height: 1.2;
-        ">
-            ${displayTitle}
+    <div style="
+        background: #ffffff; 
+        margin-bottom: 8px; 
+        padding: 14px 18px; 
+        border-radius: 12px;
+        border: 1px solid #f0f4f8;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+    ">
+        <div style="flex: 1; text-align: left; padding-right: 12px;">
+            <div style="
+                color: #2d3748; 
+                font-size: 1.05rem; 
+                font-weight: 600; 
+                line-height: 1.3;
+                letter-spacing: -0.01em;
+            ">
+                ${displayTitle}
+            </div>
+            <div style="
+                color: #718096; 
+                font-size: 0.85rem; 
+                font-weight: 500; 
+                margin-top: 3px;
+            ">
+                ${step.type}
+            </div>
         </div>
-    </div>
-    <div style="text-align: right; min-width: 85px;">
-        <div style="color: #1a202c; font-size: 1.1em; font-weight: 800;">
-            ${step.distance.toFixed(2)} <span style="font-size: 0.8em; font-weight: 600;">mi</span>
+        <div style="text-align: right; min-width: 90px; border-left: 1px solid #edf2f7; padding-left: 12px;">
+            <div style="color: #1a202c; font-size: 1.1rem; font-weight: 700;">
+                ${step.distance.toFixed(2)} <span style="font-size: 0.75rem; color: #a0aec0;">mi</span>
+            </div>
+            <div style="color: #4a5568; font-size: 0.85rem; font-weight: 500; margin-top: 2px;">
+                ⏱️ ${timeString}
+            </div>
         </div>
-        <div style="color: #718096; font-size: 0.85em; font-weight: 600; margin-top: 1px;">
-            ⏱️ ${timeString}
-        </div>
-    </div>
-</div>`;
+    </div>`;
 });
     
     html += `</div>`;
