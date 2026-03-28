@@ -240,7 +240,7 @@ window.setAllFilters = function(state) {
 };
 
 function scanWaypoints(pathCoords, speed) {
-    console.log("🔍 Scanning and building itinerary...");
+    console.log("🔍 Scanning and building refined itinerary...");
 
     routeMarkers.forEach(marker => map.removeLayer(marker));
     routeMarkers = [];
@@ -256,7 +256,7 @@ function scanWaypoints(pathCoords, speed) {
         'marina': ['Wharf/Marina'],
         'wharf': ['Wharf/Marina'],
         'aqueduct': ['Aqueduct'],
-        'tunnel': ['Tunnel', 'Tunnel Portal'],
+        'tunnel': ['Tunnel Portal'], // SURGERY 1: Removed 'Tunnel' to fix the sandwich
         'junction': ['Junction']
     };
 
@@ -281,7 +281,6 @@ function scanWaypoints(pathCoords, speed) {
                 marker.addTo(map);
                 routeMarkers.push(marker);
 
-                // --- ITINERARY MATH ---
                 const snapped = turf.nearestPointOnLine(turfLine, pt);
                 const sliced = turf.lineSlice(startPoint, snapped, turfLine);
                 const milesAlongRoute = turf.length(sliced, {units: 'miles'});
@@ -296,28 +295,33 @@ function scanWaypoints(pathCoords, speed) {
         }
     });
 
-    console.log(`✅ Dropped ${routeMarkers.length} waypoint pins.`);
-
-    // Sort the itinerary by distance from start
+    // Sort by distance
     itinerary.sort((a, b) => a.distance - b.distance);
 
-    // Build the HTML list
+    // SURGERY 2: Final HTML Generation (Sunlight Optimized / Tunnel Labeled)
     let html = `<div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">`;
     
-    itinerary.forEach(step => {
+    itinerary.forEach((step, index) => {
         const hours = step.distance / speed;
         const h = Math.floor(hours);
         const m = Math.round((hours - h) * 60);
         const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
 
+        // Logic for Tunnel Portal Naming (Entrance vs Exit)
+        let displayTitle = step.name;
+        if (step.type === 'Tunnel Portal') {
+            const isFirst = (index === itinerary.findIndex(wp => wp.name === step.name));
+            displayTitle = isFirst ? `${step.name} (Entrance)` : `${step.name} (Exit)`;
+        }
+
         html += `
-        <div style="background: rgba(255,255,255,0.8); margin-bottom: 8px; padding: 10px; border-radius: 6px; border-left: 4px solid ${step.color}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <div style="font-size: 13px;">
-                <span class="badge" style="background-color: ${step.color};">${step.type.toUpperCase()}</span><br>
-                <b style="color: #333;">${step.name}</b>
+        <div style="background: #fff; margin-bottom: 4px; padding: 12px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 14px;">
+                <b style="color: #000; font-size: 1.1em; text-transform: uppercase;">${displayTitle}</b><br>
+                <span style="color: #666; font-weight: 600;">${step.type}</span>
             </div>
-            <div style="text-align: right; font-size: 12px; color: #555;">
-                <b>${step.distance.toFixed(2)} mi</b><br>
+            <div style="text-align: right; font-size: 13px; color: #000; font-weight: bold;">
+                ${step.distance.toFixed(2)} mi<br>
                 ⏱️ ${timeString}
             </div>
         </div>`;
@@ -325,6 +329,7 @@ function scanWaypoints(pathCoords, speed) {
     
     html += `</div>`;
     return html;
+}
 }
 
 function getMarkerColor(type) {
