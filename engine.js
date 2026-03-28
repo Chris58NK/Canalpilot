@@ -319,17 +319,36 @@ function scanWaypoints(pathCoords, speed) {
 
     // 3. ULTRA-MINIMALIST HTML: Max contrast, no sub-labels
     html += `
-    <div style="background: #fff; margin-bottom: 2px; padding: 16px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-        <div style="flex: 1; text-align: left;">
-            <b style="color: #000; font-size: 1.25em; text-transform: uppercase; line-height: 1.1; letter-spacing: 0.5px;">
-                ${displayTitle}
-            </b>
+<div style="
+    background: #fcfcfc; 
+    margin-bottom: 2px; 
+    padding: 10px 14px; 
+    border-bottom: 1px solid #edf2f7;
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+">
+    <div style="flex: 1; text-align: left; padding-right: 8px;">
+        <div style="
+            color: #2d3748; 
+            font-size: 1.05em; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 0.2px;
+            line-height: 1.2;
+        ">
+            ${displayTitle}
         </div>
-        <div style="text-align: right; font-size: 14px; color: #000; font-weight: 900; min-width: 90px;">
-            ${step.distance.toFixed(2)} mi<br>
+    </div>
+    <div style="text-align: right; min-width: 85px;">
+        <div style="color: #1a202c; font-size: 1.1em; font-weight: 800;">
+            ${step.distance.toFixed(2)} <span style="font-size: 0.8em; font-weight: 600;">mi</span>
+        </div>
+        <div style="color: #718096; font-size: 0.85em; font-weight: 600; margin-top: 1px;">
             ⏱️ ${timeString}
         </div>
-    </div>`;
+    </div>
+</div>`;
 });
     
     html += `</div>`;
