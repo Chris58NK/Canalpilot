@@ -113,6 +113,7 @@ function populateDropdowns() {
     addToMaster(typeof windingHolesData !== 'undefined' ? windingHolesData : undefined, "Winding Hole");
     addToMaster(typeof aqueductsData !== 'undefined' ? aqueductsData : undefined, "Aqueduct");
     addToMaster(typeof wharvesData !== 'undefined' ? wharvesData : undefined, "Wharf/Marina");
+    addToMaster(typeof marinasData !== 'undefined' ? marinasData : undefined, "Wharf/Marina");
     addToMaster(typeof tunnelPortalsData !== 'undefined' ? tunnelPortalsData : undefined, "Tunnel Portal");
 
     masterDatabase.sort((a, b) => a.name.localeCompare(b.name));
