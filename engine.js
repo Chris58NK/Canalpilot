@@ -328,7 +328,7 @@ function scanWaypoints(pathCoords, speed) {
         const distToLine = turf.pointToLineDistance(pt, turfLine, { units: 'miles' });
 
         // Wharves/marinas are often set back from the actual canal line
-        const threshold = item.type === 'Wharf/Marina' ? 0.15 : 0.05;
+        const threshold = item.type === 'Wharf/Marina' ? 0.2 : 0.05;
 
         if (distToLine < threshold) {
             const markerColor = getMarkerColor(item.type);
