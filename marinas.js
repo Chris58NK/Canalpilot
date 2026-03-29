@@ -1,7 +1,6 @@
 const marinasData = {
   "type": "FeatureCollection",
   "features": [
-
     {
       "type": "Feature",
       "properties": {
@@ -10,7 +9,7 @@ const marinasData = {
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [-1.0809, 52.4472]
+        "coordinates": [-1.0799, 52.4473]
       }
     },
 
@@ -34,7 +33,7 @@ const marinasData = {
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [-0.9799, 52.5179]
+        "coordinates": [-0.9792, 52.5180]
       }
     },
 
@@ -49,7 +48,5 @@ const marinasData = {
         "coordinates": [-1.1325, 52.3515]
       }
     }
-
   ]
-}; 
-
+};
