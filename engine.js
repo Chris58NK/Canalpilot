@@ -381,21 +381,40 @@ function scanWaypoints(pathCoords, speed) {
         let displayTitle = cleanName;
 
         if (step.type === 'Tunnel Portal') {
-            const portals = array.filter(
-                wp =>
-                    wp.type === 'Tunnel Portal' &&
-                    wp.name.split('(')[0].trim().toLowerCase() === cleanName.toLowerCase()
-            );
 
-            if (portals.length > 1) {
-                const minDistance = Math.min(...portals.map(p => p.distance));
-                displayTitle =
-                    step.distance === minDistance
-                        ? `${cleanName} (Entrance)`
-                        : `${cleanName} (Exit)`;
-            }
+    // 1. Extract tunnel base name (strip North/South/East/West + Portal)
+    const baseName = step.name
+        .toLowerCase()
+        .replace(/(north|south|east|west)/g, '')
+        .replace(/portal/g, '')
+        .replace(/\(.*?\)/g, '')
+        .trim();
+
+    // 2. Find all portals for same tunnel
+    const portals = array.filter(wp => {
+        if (wp.type !== 'Tunnel Portal') return false;
+
+        const wpBase = wp.name
+            .toLowerCase()
+            .replace(/(north|south|east|west)/g, '')
+            .replace(/portal/g, '')
+            .replace(/\(.*?\)/g, '')
+            .trim();
+
+        return wpBase === baseName;
+    });
+
+    // 3. Assign entrance/exit based on route order (distance)
+    if (portals.length >= 2) {
+        const sorted = portals.sort((a, b) => a.distance - b.distance);
+
+        if (step === sorted[0]) {
+            displayTitle = `${cleanName} (Entrance)`;
+        } else {
+            displayTitle = `${cleanName} (Exit)`;
         }
-
+    }
+}
         html += `
         <div style="
             background: #f8fafc;
