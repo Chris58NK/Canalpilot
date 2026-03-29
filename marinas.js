@@ -1,6 +1,7 @@
 const marinasData = {
   "type": "FeatureCollection",
   "features": [
+
     {
       "type": "Feature",
       "properties": {
@@ -9,9 +10,22 @@ const marinasData = {
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [-1.0467, 52.4522]
+        "coordinates": [-1.0809, 52.4472]
       }
     },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Kilworth Wharf",
+        "waterway_name": "Leicester Line"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-1.0816, 52.4475]
+      }
+    },
+
     {
       "type": "Feature",
       "properties": {
@@ -20,9 +34,10 @@ const marinasData = {
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [-0.9395, 52.5655]
+        "coordinates": [-0.9799, 52.5179]
       }
     },
+
     {
       "type": "Feature",
       "properties": {
@@ -34,5 +49,7 @@ const marinasData = {
         "coordinates": [-1.1325, 52.3515]
       }
     }
+
   ]
-};
+}; 
+
