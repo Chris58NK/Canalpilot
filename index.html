@@ -261,7 +261,12 @@
 
             <label for="speed">Speed (mph):</label>
             <input type="number" id="speed" value="3" step="0.5">
-
+            <label for="lockDelay">Lock Working:</label>
+            <select id="lockDelay">
+            <option value="8">Fast (8 mins per lock)</option>
+            <option value="12" selected>Medium (12 mins per lock)</option>
+           <option value="18">Slow (18 mins per lock)</option>
+      </select>
             <label>Filter Waypoints:</label>
             <div class="filter-checks">
                 <div class="filter-check-item"><input type="checkbox" class="wp-filter" value="lock" checked> <span class="badge b-lock">LOCK</span></div>
