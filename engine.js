@@ -1,4 +1,4 @@
- console.log("🚀 engine.js is loading...");
+console.log("🚀 engine.js is loading...");
 
 // --- 1. GLOBAL VARIABLES ---
 let masterDatabase = [];
@@ -34,13 +34,35 @@ function initMap() {
     }
 }
 
-// --- 3. POPULATE DROPDOWNS ---
+// --- 3. DROPDOWN FILTER TYPE MAPPING ---
+function getAllowedTypesFromFilters() {
+    const typeMapping = {
+        lock: ['Lock'],
+        bridge: ['Bridge'],
+        winding: ['Winding Hole'],
+        marina: ['Wharf/Marina'],
+        wharf: ['Wharf/Marina'],
+        aqueduct: ['Aqueduct'],
+        tunnel: ['Tunnel Portal'],
+        junction: ['Junction']
+    };
+
+    const activeFilters = Array.from(document.querySelectorAll('.wp-filter:checked'))
+        .map(cb => cb.value);
+
+    let allowedTypes = [];
+    activeFilters.forEach(filter => {
+        if (typeMapping[filter]) {
+            allowedTypes.push(...typeMapping[filter]);
+        }
+    });
+
+    return allowedTypes;
+}
+
+// --- 4. POPULATE MASTER DATABASE ---
 function populateDropdowns() {
     console.log("📋 Populating dropdowns...");
-    const list = document.getElementById('lockList');
-    if (!list) return;
-
-    list.innerHTML = "";
     masterDatabase = [];
 
     const addToMaster = (data, type) => {
@@ -61,12 +83,25 @@ function populateDropdowns() {
                     feature.properties?.name ||
                     `Unnamed ${type}`;
 
-                const displayName = `${rawName} (${type})`;
+                const waterway =
+                    feature.properties?.waterway_name ||
+                    feature.properties?.waterway ||
+                    "";
+
+                // Keep original display style, but add waterway for numbered/duplicate-prone names
+                const needsWaterway =
+                    /^\D*\d+\D*$/.test(rawName) || /^lock\s+\d+/i.test(rawName) || /^bridge\s+\d+/i.test(rawName);
+
+                const displayName = needsWaterway && waterway
+                    ? `${rawName} - ${waterway} (${type})`
+                    : `${rawName} (${type})`;
 
                 masterDatabase.push({
                     name: displayName,
                     coords: [coords[0], coords[1]], // [lon, lat]
-                    type: type
+                    type: type,
+                    rawName: rawName,
+                    waterway: waterway
                 });
             }
         });
@@ -81,15 +116,30 @@ function populateDropdowns() {
     addToMaster(typeof tunnelPortalsData !== 'undefined' ? tunnelPortalsData : undefined, "Tunnel Portal");
 
     masterDatabase.sort((a, b) => a.name.localeCompare(b.name));
+    updateDropdownOptions();
+}
 
-    masterDatabase.forEach(item => {
+// --- 5. REBUILD DATALIST BASED ON CHECKED FILTERS ---
+function updateDropdownOptions() {
+    const list = document.getElementById('lockList');
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    const allowedTypes = getAllowedTypesFromFilters();
+
+    const filteredItems = masterDatabase
+        .filter(item => allowedTypes.includes(item.type))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    filteredItems.forEach(item => {
         const option = document.createElement('option');
         option.value = item.name;
         list.appendChild(option);
     });
 }
 
-// --- 4. BUILD THE NAVIGATION GRAPH ---
+// --- 6. BUILD THE NAVIGATION GRAPH ---
 function buildGraph() {
     console.log("🕸️ Building canal routing graph...");
     canalGraph = {};
@@ -127,7 +177,7 @@ function buildGraph() {
     });
 }
 
-// --- 5. FIND CLOSEST CANAL NODE ---
+// --- 7. FIND CLOSEST CANAL NODE ---
 function findClosestNode(targetCoords) {
     let closestId = null;
     let minDistance = Infinity;
@@ -150,7 +200,7 @@ function findClosestNode(targetCoords) {
     return closestId;
 }
 
-// --- 6. MAIN ROUTE CALCULATION ---
+// --- 8. MAIN ROUTE CALCULATION ---
 function calculateRoute() {
     const startVal = document.getElementById('startNode').value;
     const endVal = document.getElementById('endNode').value;
@@ -219,7 +269,7 @@ function calculateRoute() {
 
         while (step) {
             const [lon, lat] = step.split(',').map(Number);
-            pathCoords.push([lat, lon]); // Leaflet uses [lat, lon]
+            pathCoords.push([lat, lon]); // Leaflet format
             step = previousNodes[step];
         }
 
@@ -250,16 +300,13 @@ function calculateRoute() {
 
         map.fitBounds(currentRouteLayer.getBounds(), { padding: [40, 40] });
 
-        // User settings
         const speed = parseFloat(document.getElementById('speed').value) || 3;
         const lockDelay = parseFloat(document.getElementById('lockDelay').value) || 12;
 
-        // Scan route features
         const itineraryResult = scanWaypoints(pathCoords, speed);
         const itineraryHTML = itineraryResult.html;
         const lockCount = itineraryResult.lockCount;
 
-        // Timing
         const cruiseHours = totalMiles / speed;
         const lockHours = (lockCount * lockDelay) / 60;
         const totalHours = cruiseHours + lockHours;
@@ -278,44 +325,26 @@ function calculateRoute() {
     }, 50);
 }
 
-// --- 7. FILTER TOGGLES ---
+// --- 9. FILTER TOGGLES ---
 window.setAllFilters = function(state) {
     document.querySelectorAll('.wp-filter').forEach(cb => {
         cb.checked = state;
     });
+    updateDropdownOptions();
 };
 
-// --- 8. WAYPOINT SCANNER ---
+// --- 10. WAYPOINT SCANNER ---
 function scanWaypoints(pathCoords, speed) {
     console.log("🔍 Scanning and building refined itinerary...");
 
-    const activeFilters = Array.from(document.querySelectorAll('.wp-filter:checked'))
-        .map(cb => cb.value);
+    const allowedTypes = getAllowedTypesFromFilters();
 
-    if (activeFilters.length === 0 || pathCoords.length < 2) {
+    if (allowedTypes.length === 0 || pathCoords.length < 2) {
         return {
             html: "",
             lockCount: 0
         };
     }
-
-    const typeMapping = {
-        lock: ['Lock'],
-        bridge: ['Bridge'],
-        winding: ['Winding Hole'],
-        marina: ['Wharf/Marina'],
-        wharf: ['Wharf/Marina'],
-        aqueduct: ['Aqueduct'],
-        tunnel: ['Tunnel Portal'],
-        junction: ['Junction']
-    };
-
-    let allowedTypes = [];
-    activeFilters.forEach(filter => {
-        if (typeMapping[filter]) {
-            allowedTypes.push(...typeMapping[filter]);
-        }
-    });
 
     const turfLine = turf.lineString(pathCoords.map(c => [c[1], c[0]])); // back to [lon, lat]
     const routeStartPoint = turf.point([pathCoords[0][1], pathCoords[0][0]]);
@@ -327,8 +356,8 @@ function scanWaypoints(pathCoords, speed) {
         const pt = turf.point(item.coords);
         const distToLine = turf.pointToLineDistance(pt, turfLine, { units: 'miles' });
 
-        // Wharves/marinas are often set back from the actual canal line
-        const threshold = item.type === 'Wharf/Marina' ? 0.2 : 0.05;
+        let threshold = 0.05;
+        if (item.type === 'Wharf/Marina') threshold = 0.35;
 
         if (distToLine < threshold) {
             const markerColor = getMarkerColor(item.type);
@@ -351,6 +380,8 @@ function scanWaypoints(pathCoords, speed) {
 
             itinerary.push({
                 name: item.name,
+                rawName: item.rawName,
+                waterway: item.waterway,
                 type: item.type,
                 distance: milesAlongRoute,
                 color: markerColor
@@ -370,8 +401,7 @@ function scanWaypoints(pathCoords, speed) {
         const m = Math.round((hours - h) * 60);
         const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
 
-        let cleanName = step.name
-            .split('(')[0]
+        let cleanName = step.rawName
             .trim()
             .toLowerCase()
             .split(' ')
@@ -381,40 +411,34 @@ function scanWaypoints(pathCoords, speed) {
         let displayTitle = cleanName;
 
         if (step.type === 'Tunnel Portal') {
+            const baseName = step.rawName
+                .toLowerCase()
+                .replace(/(north|south|east|west)/g, '')
+                .replace(/portal/g, '')
+                .replace(/\(.*?\)/g, '')
+                .trim();
 
-    // 1. Extract tunnel base name (strip North/South/East/West + Portal)
-    const baseName = step.name
-        .toLowerCase()
-        .replace(/(north|south|east|west)/g, '')
-        .replace(/portal/g, '')
-        .replace(/\(.*?\)/g, '')
-        .trim();
+            const portals = array.filter(wp => {
+                if (wp.type !== 'Tunnel Portal') return false;
 
-    // 2. Find all portals for same tunnel
-    const portals = array.filter(wp => {
-        if (wp.type !== 'Tunnel Portal') return false;
+                const wpBase = wp.rawName
+                    .toLowerCase()
+                    .replace(/(north|south|east|west)/g, '')
+                    .replace(/portal/g, '')
+                    .replace(/\(.*?\)/g, '')
+                    .trim();
 
-        const wpBase = wp.name
-            .toLowerCase()
-            .replace(/(north|south|east|west)/g, '')
-            .replace(/portal/g, '')
-            .replace(/\(.*?\)/g, '')
-            .trim();
+                return wpBase === baseName;
+            });
 
-        return wpBase === baseName;
-    });
-
-    // 3. Assign entrance/exit based on route order (distance)
-    if (portals.length >= 2) {
-        const sorted = portals.sort((a, b) => a.distance - b.distance);
-
-        if (step === sorted[0]) {
-            displayTitle = `${cleanName} (Entrance)`;
-        } else {
-            displayTitle = `${cleanName} (Exit)`;
+            if (portals.length >= 2) {
+                const sorted = [...portals].sort((a, b) => a.distance - b.distance);
+                displayTitle = step.distance === sorted[0].distance
+                    ? `${cleanName} (Entrance)`
+                    : `${cleanName} (Exit)`;
+            }
         }
-    }
-}
+
         html += `
         <div style="
             background: #f8fafc;
@@ -444,7 +468,7 @@ function scanWaypoints(pathCoords, speed) {
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 ">
-                    ${step.type}
+                    ${step.type}${step.waterway ? ` • ${step.waterway}` : ''}
                 </div>
             </div>
             <div style="
@@ -472,7 +496,7 @@ function scanWaypoints(pathCoords, speed) {
     };
 }
 
-// --- 9. MARKER COLOURS ---
+// --- 11. MARKER COLOURS ---
 function getMarkerColor(type) {
     if (type === 'Lock') return '#ff6b6b';
     if (type === 'Bridge') return '#4ecdc4';
@@ -483,10 +507,14 @@ function getMarkerColor(type) {
     return '#3498db';
 }
 
-// --- 10. START ENGINE ON LOAD ---
+// --- 12. START ENGINE ON LOAD ---
 window.onload = function() {
     console.log("🏁 Window loaded, starting engine...");
     initMap();
     populateDropdowns();
     buildGraph();
+
+    document.querySelectorAll('.wp-filter').forEach(cb => {
+        cb.addEventListener('change', updateDropdownOptions);
+    });
 };
