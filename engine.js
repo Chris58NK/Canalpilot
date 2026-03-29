@@ -226,7 +226,12 @@ function calculateRoute() {
                 <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-bottom: 15px;">
                     <strong>🗺️ Route Mapped Successfully!</strong><br><br>
                     Distance: <b>${totalMiles.toFixed(2)} miles</b><br>
-                    Est. Travel Time (${speed}mph): <b>${(totalMiles / speed).toFixed(1)} hours</b>
+                   const lockDelay = parseFloat(document.getElementById('lockDelay').value) || 12;
+             const lockCount = itinerary.filter(item => item.type === 'Lock').length;
+
+             const cruiseHours = totalMiles / speed;
+             const lockHours = (lockCount * lockDelay) / 60;
+             const totalHours = cruiseHours + lockHours;
                 </div>
                 ${itineraryHTML}
             `;
