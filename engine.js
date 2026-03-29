@@ -73,7 +73,6 @@ function populateDropdowns() {
     addToMaster(typeof aqueductsData !== 'undefined' ? aqueductsData : undefined, "Aqueduct");
     addToMaster(typeof wharvesData !== 'undefined' ? wharvesData : undefined, "Wharf/Marina");
     addToMaster(typeof tunnelPortalsData !== 'undefined' ? tunnelPortalsData : undefined, "Tunnel Portal");
-    addToMaster(typeof facilitiesData !== 'undefined' ? facilitiesData : undefined, "Facility");
 
     masterDatabase.sort((a, b) => a.name.localeCompare(b.name));
 
