@@ -304,7 +304,7 @@ function calculateRoute() {
         const speed = parseFloat(document.getElementById('speed').value) || 3;
         const lockDelay = parseFloat(document.getElementById('lockDelay').value) || 12;
 
-        const itineraryResult = scanWaypoints(pathCoords, speed);
+        const itineraryResult = scanWaypoints(pathCoords, speed, lockDelay);
         const itineraryHTML = itineraryResult.html;
         const lockCount = itineraryResult.lockCount;
 
@@ -335,7 +335,7 @@ window.setAllFilters = function(state) {
 };
 
 // --- 10. WAYPOINT SCANNER ---
-function scanWaypoints(pathCoords, speed) {
+function scanWaypoints(pathCoords, speed, lockDelay) {
     console.log("🔍 Scanning and building refined itinerary...");
 
     const allowedTypes = getAllowedTypesFromFilters();
@@ -392,15 +392,34 @@ function scanWaypoints(pathCoords, speed) {
 
     itinerary.sort((a, b) => a.distance - b.distance);
 
-    const lockCount = itinerary.filter(item => item.type === 'Lock').length;
+const lockCount = itinerary.filter(item => item.type === 'Lock').length;
 
-    let html = `<div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">`;
+// running elapsed time including lock delays already passed
+let previousDistance = 0;
+let elapsedMinutes = 0;
 
-    itinerary.forEach((step, index, array) => {
-        const hours = step.distance / speed;
-        const h = Math.floor(hours);
-        const m = Math.round((hours - h) * 60);
-        const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
+itinerary.forEach(step => {
+    const segmentMiles = Math.max(0, step.distance - previousDistance);
+    elapsedMinutes += (segmentMiles / speed) * 60;
+
+    // time shown on card = arrival time at this feature
+    step.elapsedMinutes = elapsedMinutes;
+
+    // after arriving at a lock, add its working time for subsequent features
+    if (step.type === 'Lock') {
+        elapsedMinutes += lockDelay;
+    }
+
+    previousDistance = step.distance;
+});
+
+let html = `<div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">`;
+
+itinerary.forEach((step, index, array) => {
+    const totalMinutes = Math.round(step.elapsedMinutes);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
 
         let cleanName = step.rawName
             .trim()
