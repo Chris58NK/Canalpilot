@@ -369,6 +369,7 @@ function scanWaypoints(pathCoords, speed, lockDelay, startPointName, endPointNam
     const allMatchedWaypoints = [];
 
     masterDatabase.forEach(item => {
+       if (shouldExcludeWaypointForRoute(item, startPointName, endPointName)) return;
         const pt = turf.point(item.coords);
         const distToLine = turf.pointToLineDistance(pt, turfLine, { units: 'miles' });
 
