@@ -333,11 +333,27 @@ window.setAllFilters = function(state) {
     });
     updateDropdownOptions();
 };
+function shouldExcludeWaypointForRoute(item, startPointName, endPointName) {
+   const routeText = `${startPointName} ${endPointName}`.toLowerCase();
+    const usesHarborough =
+        routeText.includes("market harborough") ||
+        routeText.includes("union wharf");
+
+    if (!usesHarborough) return false;
+
+    const raw = (item.rawName || "").toLowerCase();
+    const waterway = (item.waterway || "").toLowerCase();
+
+    return (
+        item.type === "Lock" &&
+        waterway.includes("leicester line") &&
+        ["lock 17", "lock 16", "lock 15", "lock 14"].some(lock => raw.includes(lock))
+    );
+}
 
 // --- 10. WAYPOINT SCANNER ---
-function scanWaypoints(pathCoords, speed, lockDelay) {
+function scanWaypoints(pathCoords, speed, lockDelay, startPointName, endPointName) {
     console.log("🔍 Scanning and building refined itinerary...");
-
     if (pathCoords.length < 2) {
         return {
             html: "",
