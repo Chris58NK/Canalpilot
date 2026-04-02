@@ -338,22 +338,21 @@ window.setAllFilters = function(state) {
 function scanWaypoints(pathCoords, speed, lockDelay) {
     console.log("🔍 Scanning and building refined itinerary...");
 
-    const allowedTypes = getAllowedTypesFromFilters();
-
-    if (allowedTypes.length === 0 || pathCoords.length < 2) {
+    if (pathCoords.length < 2) {
         return {
             html: "",
             lockCount: 0
         };
     }
 
+    const allowedTypes = getAllowedTypesFromFilters();
+
     const turfLine = turf.lineString(pathCoords.map(c => [c[1], c[0]])); // back to [lon, lat]
     const routeStartPoint = turf.point([pathCoords[0][1], pathCoords[0][0]]);
-    const itinerary = [];
+
+    const allMatchedWaypoints = [];
 
     masterDatabase.forEach(item => {
-        if (!allowedTypes.includes(item.type)) return;
-
         const pt = turf.point(item.coords);
         const distToLine = turf.pointToLineDistance(pt, turfLine, { units: 'miles' });
 
@@ -361,35 +360,166 @@ function scanWaypoints(pathCoords, speed, lockDelay) {
         if (item.type === 'Wharf/Marina') threshold = 0.35;
 
         if (distToLine < threshold) {
-            const markerColor = getMarkerColor(item.type);
-
-            const marker = L.circleMarker([item.coords[1], item.coords[0]], {
-                radius: 6,
-                fillColor: markerColor,
-                color: "#ffffff",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 1
-            }).bindPopup(`<b>${item.name}</b>`);
-
-            marker.addTo(map);
-            routeMarkers.push(marker);
-
             const snapped = turf.nearestPointOnLine(turfLine, pt);
             const sliced = turf.lineSlice(routeStartPoint, snapped, turfLine);
             const milesAlongRoute = turf.length(sliced, { units: 'miles' });
 
-            itinerary.push({
+            allMatchedWaypoints.push({
                 name: item.name,
                 rawName: item.rawName,
                 waterway: item.waterway,
                 type: item.type,
                 distance: milesAlongRoute,
-                color: markerColor
+                color: getMarkerColor(item.type),
+                coords: item.coords
             });
         }
     });
 
+    allMatchedWaypoints.sort((a, b) => a.distance - b.distance);
+
+    // Summary lock count should always use all matched route features, not filtered display
+    const lockCount = allMatchedWaypoints.filter(item => item.type === 'Lock').length;
+
+    // Running elapsed time should also use all matched route features
+    let previousDistance = 0;
+    let elapsedMinutes = 0;
+
+    allMatchedWaypoints.forEach(step => {
+        const segmentMiles = Math.max(0, step.distance - previousDistance);
+        elapsedMinutes += (segmentMiles / speed) * 60;
+
+        // arrival time at this feature
+        step.elapsedMinutes = elapsedMinutes;
+
+        // add lock working time after arriving, so later steps include it
+        if (step.type === 'Lock') {
+            elapsedMinutes += lockDelay;
+        }
+
+        previousDistance = step.distance;
+    });
+
+    // Only visible itinerary respects filters
+    const displayedItinerary = allMatchedWaypoints.filter(item => allowedTypes.includes(item.type));
+
+    // Draw only displayed markers
+    displayedItinerary.forEach(item => {
+        const marker = L.circleMarker([item.coords[1], item.coords[0]], {
+            radius: 6,
+            fillColor: item.color,
+            color: "#ffffff",
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 1
+        }).bindPopup(`<b>${item.name}</b>`);
+
+        marker.addTo(map);
+        routeMarkers.push(marker);
+    });
+
+    let html = `<div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">`;
+
+    displayedItinerary.forEach((step, index, array) => {
+        const totalMinutes = Math.round(step.elapsedMinutes);
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        const timeString = h > 0 ? `${h}h ${m}m` : `${m} mins`;
+
+        let cleanName = step.rawName
+            .trim()
+            .toLowerCase()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+        let displayTitle = cleanName;
+
+        if (step.type === 'Tunnel Portal') {
+            const baseName = step.rawName
+                .toLowerCase()
+                .replace(/(north|south|east|west)/g, '')
+                .replace(/portal/g, '')
+                .replace(/\(.*?\)/g, '')
+                .trim();
+
+            const portals = array.filter(wp => {
+                if (wp.type !== 'Tunnel Portal') return false;
+
+                const wpBase = wp.rawName
+                    .toLowerCase()
+                    .replace(/(north|south|east|west)/g, '')
+                    .replace(/portal/g, '')
+                    .replace(/\(.*?\)/g, '')
+                    .trim();
+
+                return wpBase === baseName;
+            });
+
+            if (portals.length >= 2) {
+                const sorted = [...portals].sort((a, b) => a.distance - b.distance);
+                displayTitle = step.distance === sorted[0].distance
+                    ? `${cleanName} (Entrance)`
+                    : `${cleanName} (Exit)`;
+            }
+        }
+
+        html += `
+        <div style="
+            background: #f8fafc;
+            margin-bottom: 10px;
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        ">
+            <div style="flex: 1; text-align: left;">
+                <div style="
+                    color: #1e3a8a;
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    line-height: 1.2;
+                ">
+                    ${displayTitle}
+                </div>
+                <div style="
+                    color: #64748b;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    margin-top: 4px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                ">
+                    ${step.type}${step.waterway ? ` • ${step.waterway}` : ''}
+                </div>
+            </div>
+            <div style="
+                text-align: right;
+                min-width: 90px;
+                border-left: 2px solid #cbd5e1;
+                padding-left: 15px;
+                margin-left: 10px;
+            ">
+                <div style="color: #0f172a; font-size: 1.15rem; font-weight: 800;">
+                    ${step.distance.toFixed(2)} <span style="font-size: 0.7rem; color: #94a3b8;">MI</span>
+                </div>
+                <div style="color: #475569; font-size: 0.9rem; font-weight: 600; margin-top: 2px;">
+                    ${timeString}
+                </div>
+            </div>
+        </div>`;
+    });
+
+    html += `</div>`;
+
+    return {
+        html,
+        lockCount
+    };
+}
     itinerary.sort((a, b) => a.distance - b.distance);
 
 const lockCount = itinerary.filter(item => item.type === 'Lock').length;
