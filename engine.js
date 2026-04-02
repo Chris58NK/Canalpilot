@@ -304,7 +304,13 @@ function calculateRoute() {
         const speed = parseFloat(document.getElementById('speed').value) || 3;
         const lockDelay = parseFloat(document.getElementById('lockDelay').value) || 12;
 
-        const itineraryResult = scanWaypoints(pathCoords, speed, lockDelay);
+       const itineraryResult = scanWaypoints(
+    pathCoords,
+    speed,
+    lockDelay,
+    startPoint.name,
+    endPoint.name
+);
         const itineraryHTML = itineraryResult.html;
         const lockCount = itineraryResult.lockCount;
 
