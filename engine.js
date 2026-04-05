@@ -1,5 +1,6 @@
 console.log("🚀 engine.js is loading...");
 
+// CanalPilot v1.10 — Final (Stable Baseline before v2 rewrite)
 // --- 1. GLOBAL VARIABLES ---
 let masterDatabase = [];
 let canalGraph = {};
